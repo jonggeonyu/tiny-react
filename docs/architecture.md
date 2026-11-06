@@ -137,7 +137,7 @@ JSDoc은 `_`로 시작하는 파일을 기본으로 제외하므로, `src/`의 �
 - `REMOVE`는 찾은 노드를 `remove`로 지운다.
 - `TEXT`는 찾은 노드의 `nodeValue`를 바꾼다.
 - `REPLACE`는 찾은 노드를 `createDom(node)`로 `replaceWith`한다.
-- `PROPS`는 `set`을 `setProp`으로, `remove`를 `removeAttribute`로 적용한다.
+- `PROPS`는 `remove`를 `removeAttribute`로 먼저 적용하고, `set`을 `setProp`으로 적용한다. HTML 속성 이름은 대소문자를 구분하지 않으므로, 순서가 반대이면 `{ a: '1' }`이 `{ A: '1' }`로 바뀔 때 넣은 속성이 곧바로 지워진다.
 
 `path`가 맞으려면 실제 DOM의 `childNodes`와 Virtual DOM의 `children`이 번호까지 일치해야 한다.
 

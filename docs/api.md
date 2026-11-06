@@ -14,6 +14,12 @@
 새 노드를 <code>DocumentFragment</code>에 모두 만든 뒤 한 번에 교체한다.
 영역 자체의 태그와 속성은 바꾸지 않는다.</p>
 </dd>
+<dt><a href="#diff">diff(oldVdom, newVdom)</a> ⇒ <code><a href="#Change">Array.&lt;Change&gt;</a></code></dt>
+<dd><p>두 Virtual DOM을 비교해 변경 목록을 돌려준다. 실제 DOM과 입력은 건드리지 않는다.
+자식은 번호로만 비교하므로 추가와 삭제는 항상 자식 목록의 끝에서 일어나고, 목록을 순서대로 적용하면 앞쪽 번호가 밀리지 않는다.
+<code>ADD</code>와 <code>REPLACE</code>의 <code>node</code>는 새 Virtual DOM의 노드를 복사하지 않고 그대로 담는다.
+두 인자 중 적어도 하나는 있어야 한다. <code>diff(undefined, undefined)</code>는 지원하지 않는 입력이다.</p>
+</dd>
 <dt><a href="#domToVdom">domToVdom(node)</a> ⇒ <code><a href="#VNode">VNode</a></code> | <code>null</code></dt>
 <dd><p>DOM 노드 하나를 Virtual DOM으로 변환한다.
 주석과, 공백만 있으면서 줄바꿈을 포함한 텍스트는 제외 대상이므로 <code>null</code>을 돌려준다.
@@ -41,6 +47,10 @@
 ## Typedefs
 
 <dl>
+<dt><a href="#Change">Change</a> : <code>object</code></dt>
+<dd><p>변경 목록의 항목 하나이다.
+<code>kind</code>에 따라 <code>node</code>, <code>value</code>, <code>set</code>과 <code>remove</code> 중 필요한 것만 가진다.</p>
+</dd>
 <dt><a href="#VElement">VElement</a> : <code>object</code></dt>
 <dd><p>Virtual DOM의 요소 노드이다.</p>
 </dd>
@@ -101,6 +111,26 @@ Virtual DOM을 실제 DOM으로 변환한다.
 | --- | --- | --- |
 | container | <code>Element</code> | 다시 그릴 영역 |
 | root | [<code>VElement</code>](#VElement) | `type`이 `'root'`인 루트 노드 |
+
+<a name="diff"></a>
+
+## diff(oldVdom, newVdom) ⇒ [<code>Array.&lt;Change&gt;</code>](#Change)
+두 Virtual DOM을 비교해 변경 목록을 돌려준다. 실제 DOM과 입력은 건드리지 않는다.
+자식은 번호로만 비교하므로 추가와 삭제는 항상 자식 목록의 끝에서 일어나고, 목록을 순서대로 적용하면 앞쪽 번호가 밀리지 않는다.
+`ADD`와 `REPLACE`의 `node`는 새 Virtual DOM의 노드를 복사하지 않고 그대로 담는다.
+두 인자 중 적어도 하나는 있어야 한다. `diff(undefined, undefined)`는 지원하지 않는 입력이다.
+
+**Kind**: global function  
+**Returns**: [<code>Array.&lt;Change&gt;</code>](#Change) - 변경 목록. 바뀐 내용이 없으면 빈 배열이다.  
+**Throws**:
+
+- <code>RangeError</code> 재귀로 비교하므로 아주 깊게 중첩되면 오류가 날 수 있다.
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| oldVdom | [<code>VNode</code>](#VNode) \| <code>undefined</code> | 이전 Virtual DOM. `undefined`이면 없는 노드이고, 이때 `newVdom`은 있어야 한다. |
+| newVdom | [<code>VNode</code>](#VNode) \| <code>undefined</code> | 새 Virtual DOM. `undefined`이면 없는 노드이고, 이때 `oldVdom`은 있어야 한다. |
 
 <a name="domToVdom"></a>
 
@@ -167,6 +197,24 @@ HTML 문자열을 루트 Virtual DOM으로 바꾼다.
 | Param | Type | Description |
 | --- | --- | --- |
 | html | <code>string</code> | 변환할 HTML 문자열 |
+
+<a name="Change"></a>
+
+## Change : <code>object</code>
+변경 목록의 항목 하나이다.
+`kind`에 따라 `node`, `value`, `set`과 `remove` 중 필요한 것만 가진다.
+
+**Kind**: global typedef  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| kind | <code>&#x27;ADD&#x27;</code> \| <code>&#x27;REMOVE&#x27;</code> \| <code>&#x27;TEXT&#x27;</code> \| <code>&#x27;REPLACE&#x27;</code> \| <code>&#x27;PROPS&#x27;</code> | 변경 종류 |
+| path | <code>Array.&lt;number&gt;</code> | 루트에서 `childNodes` 번호를 따라가는 경로 |
+| [node] | [<code>VNode</code>](#VNode) | `ADD`와 `REPLACE`에서 새로 넣을 노드 |
+| [value] | <code>string</code> | `TEXT`의 새 내용 |
+| [set] | <code>Object.&lt;string, string&gt;</code> | `PROPS`에서 새로 생기거나 값이 바뀐 속성 |
+| [remove] | <code>Array.&lt;string&gt;</code> | `PROPS`에서 사라진 속성의 이름 |
 
 <a name="VElement"></a>
 
