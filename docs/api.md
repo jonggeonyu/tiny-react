@@ -23,6 +23,19 @@
 <dd><p>영역의 자식들을 변환해 루트 Virtual DOM을 만든다.
 영역 자체의 태그와 속성은 루트 노드에 넣지 않는다.</p>
 </dd>
+<dt><a href="#vdomToHtml">vdomToHtml(root)</a> ⇒ <code>string</code></dt>
+<dd><p>루트 Virtual DOM을 HTML 문자열로 바꾼다.
+문서에 붙이지 않은 임시 요소에 그린 뒤 <code>innerHTML</code>을 읽으므로, 이스케이프는 브라우저가 처리한다.
+다만 <code>script</code>, <code>style</code>처럼 내용을 그대로 쓰는 요소의 텍스트는 이스케이프되지 않는다.
+<code>htmlToVdom</code>과의 왕복은 파서가 만든 Virtual DOM을 기준으로 하며, 손으로 만든 Virtual DOM은 보장하지 않는다.</p>
+</dd>
+<dt><a href="#htmlToVdom">htmlToVdom(html)</a> ⇒ <code><a href="#VElement">VElement</a></code></dt>
+<dd><p>HTML 문자열을 루트 Virtual DOM으로 바꾼다.
+<code>&lt;template&gt;</code>에서 파싱하므로 내용이 화면에 그려지거나 실행되지 않고, <code>&lt;tr&gt;</code>로 시작하는 입력도 버려지지 않는다.
+다만 최상위 표 요소는 앞뒤 내용에 따라 파서가 버릴 수 있다.
+<code>&lt;p&gt;</code> 같은 일반 요소나 <code>&lt;td&gt;</code> 뒤의 <code>&lt;tr&gt;</code>은 태그가 버려지고 내용만 남으며, <code>&lt;col&gt;</code> 뒤의 내용은 통째로 버려진다.
+닫지 않은 태그 같은 일반적인 잘못된 입력은 파서가 고쳐서 읽는다.</p>
+</dd>
 </dl>
 
 ## Typedefs
@@ -115,6 +128,45 @@ DOM 노드 하나를 Virtual DOM으로 변환한다.
 | Param | Type | Description |
 | --- | --- | --- |
 | container | <code>Element</code> \| <code>DocumentFragment</code> | 변환할 영역 |
+
+<a name="vdomToHtml"></a>
+
+## vdomToHtml(root) ⇒ <code>string</code>
+루트 Virtual DOM을 HTML 문자열로 바꾼다.
+문서에 붙이지 않은 임시 요소에 그린 뒤 `innerHTML`을 읽으므로, 이스케이프는 브라우저가 처리한다.
+다만 `script`, `style`처럼 내용을 그대로 쓰는 요소의 텍스트는 이스케이프되지 않는다.
+`htmlToVdom`과의 왕복은 파서가 만든 Virtual DOM을 기준으로 하며, 손으로 만든 Virtual DOM은 보장하지 않는다.
+
+**Kind**: global function  
+**Returns**: <code>string</code> - 루트의 자식들을 직렬화한 HTML 문자열. 루트 자체의 태그는 들어가지 않는다.  
+**Throws**:
+
+- <code>Error</code> 노드를 만들지 못하면 `renderRoot`의 오류를 그대로 던진다.
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| root | [<code>VElement</code>](#VElement) | `type`이 `'root'`인 루트 노드 |
+
+<a name="htmlToVdom"></a>
+
+## htmlToVdom(html) ⇒ [<code>VElement</code>](#VElement)
+HTML 문자열을 루트 Virtual DOM으로 바꾼다.
+`<template>`에서 파싱하므로 내용이 화면에 그려지거나 실행되지 않고, `<tr>`로 시작하는 입력도 버려지지 않는다.
+다만 최상위 표 요소는 앞뒤 내용에 따라 파서가 버릴 수 있다.
+`<p>` 같은 일반 요소나 `<td>` 뒤의 `<tr>`은 태그가 버려지고 내용만 남으며, `<col>` 뒤의 내용은 통째로 버려진다.
+닫지 않은 태그 같은 일반적인 잘못된 입력은 파서가 고쳐서 읽는다.
+
+**Kind**: global function  
+**Returns**: [<code>VElement</code>](#VElement) - `type`이 `'root'`인 루트 노드  
+**Throws**:
+
+- <code>RangeError</code> 중첩이 너무 깊으면 오류를 던진다. jsdom에서는 2만 단계에서 확인했다.
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| html | <code>string</code> | 변환할 HTML 문자열 |
 
 <a name="VElement"></a>
 
