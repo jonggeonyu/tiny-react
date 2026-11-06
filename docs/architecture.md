@@ -9,6 +9,7 @@ JavaScript로 구현한다.
 domToVdom(node)              DOM 노드 → Virtual DOM
 containerToVdom(container)   영역의 자식들 → 루트 Virtual DOM
 createDom(vnode)             Virtual DOM → 실제 DOM
+setProp(element, name, value)  속성 하나를 실제 DOM에 넣음
 renderRoot(container, root)  루트 Virtual DOM으로 영역을 다시 그림
 vdomToHtml(root)             루트 Virtual DOM → HTML 문자열
 htmlToVdom(html)             HTML 문자열 → 루트 Virtual DOM
@@ -29,7 +30,7 @@ index.html                 Phase 1 검증 페이지
 src/
 ├── core/                  Phase 2에서 재사용하는 코드
 │   ├── domToVdom.js       domToVdom, containerToVdom
-│   ├── createDom.js       createDom, renderRoot
+│   ├── createDom.js       createDom, renderRoot, setProp
 │   ├── html.js            vdomToHtml, htmlToVdom
 │   ├── diff.js
 │   └── patch.js
@@ -63,8 +64,12 @@ JSDoc은 `_`로 시작하는 파일을 기본으로 제외하므로, `src/`의 �
 2. 요소는 `tagName`을 소문자로 바꿔 `type`에 넣는다.
 3. `attributes`를 읽어 `props`를 만든다.
 4. `childNodes`를 순회하면서 같은 변환을 재귀로 반복해 `children`을 만든다.
-5. 주석 노드와 공백만 있는 텍스트는 제외한다.
+5. 주석 노드와, 공백만 있으면서 줄바꿈을 포함한 텍스트는 제외한다. 같은 줄의 공백만 있는 텍스트는 유지한다.
 6. 제외한 뒤 텍스트가 나란히 남으면 하나의 문자열로 합친다.
+
+여기서 공백은 HTML의 공백 문자(스페이스, 탭, 줄바꿈, 폼 피드)이다. `&nbsp;`는 화면에 보이는 내용이므로 공백으로 치지 않는다.
+
+`domToVdom(node)`는 제외 대상 노드에 `null`을 돌려주고, 호출하는 쪽에서 걸러 낸다.
 
 `containerToVdom(container)`는 `container`의 `childNodes`에 같은 변환을 적용해 루트 노드를 만든다.
 
@@ -72,10 +77,11 @@ JSDoc은 `_`로 시작하는 파일을 기본으로 제외하므로, `src/`의 �
 테스트 영역을 렌더링할 때와, 노드 추가나 교체에서 새 요소를 만들 때 사용한다.
 
 1. 문자열이면 `document.createTextNode`로 텍스트 노드를 만든다.
-2. 객체이면 `document.createElement`로 요소를 만들고 `props`를 속성으로 넣는다.
+2. 객체이면 `document.createElement`로 요소를 만들고 `props`를 `setProp`으로 넣는다.
 3. `children`을 재귀로 만들어 요소에 붙인다.
 
-`renderRoot(container, root)`는 `root.children`을 `createDom`으로 만들어 `container`의 내용을 통째로 바꾼다.
+`renderRoot(container, root)`는 `root.children`을 `createDom`으로 모두 만든 뒤 `container`의 내용을 한 번에 바꾼다.
+중간에 오류가 나면 기존 화면이 그대로 남는다.
 
 ## vdomToHtml과 htmlToVdom: HTML 문자열 변환
 테스트 영역의 `textarea`는 문자열을 다루므로 두 변환이 필요하다.
@@ -131,7 +137,7 @@ JSDoc은 `_`로 시작하는 파일을 기본으로 제외하므로, `src/`의 �
 - `REMOVE`는 찾은 노드를 `remove`로 지운다.
 - `TEXT`는 찾은 노드의 `nodeValue`를 바꾼다.
 - `REPLACE`는 찾은 노드를 `createDom(node)`로 `replaceWith`한다.
-- `PROPS`는 `set`을 `setAttribute`로, `remove`를 `removeAttribute`로 적용한다.
+- `PROPS`는 `set`을 `setProp`으로, `remove`를 `removeAttribute`로 적용한다.
 
 `path`가 맞으려면 실제 DOM의 `childNodes`와 Virtual DOM의 `children`이 번호까지 일치해야 한다.
 
@@ -161,6 +167,8 @@ JSDoc은 `_`로 시작하는 파일을 기본으로 제외하므로, `src/`의 �
 5. 변경 목록을 `patch`로 실제 영역에 적용한다.
 6. 새 Virtual DOM을 State History에 저장한다.
 
+`patch`가 도중에 실패하면 현재 Virtual DOM을 `renderRoot`로 실제 영역에 다시 그려서, 실제 영역과 State History가 어긋나지 않게 한다.
+
 ### 뒤로가기와 앞으로가기
 1. `current()`로 현재 Virtual DOM을 보관한다.
 2. `back()`이나 `forward()`로 목표 Virtual DOM을 얻는다. `null`이면 끝낸다.
@@ -173,6 +181,12 @@ JSDoc은 `_`로 시작하는 파일을 기본으로 제외하므로, `src/`의 �
 - SVG처럼 네임스페이스가 필요한 요소는 지원하지 않는다.
 - `input`의 `value`처럼 속성이 아닌 프로퍼티는 비교하지 않는다.
 - `textarea`에 다시 넣는 HTML은 줄바꿈과 들여쓰기를 정렬하지 않는다.
+- `<pre>`의 첫 줄바꿈은 HTML 파서가 지우므로, 왕복하면 고치지 않은 내용도 변경으로 잡힐 수 있다.
+- `<template>` 요소는 내용이 `childNodes`가 아닌 `content`에 있으므로, 안의 내용은 Virtual DOM에 들어가지 않는다.
+- 공백 규칙은 태그와 상관없이 적용한다. `<pre>`와 `<textarea>`처럼 공백이 의미를 갖는 요소에서도 줄바꿈이 포함된 공백만 있는 텍스트는 지워진다.
+- 주석 사이의 줄바꿈도 지운 뒤 텍스트를 합치므로, `a<!--x-->
+<!--y-->b`는 `ab`가 된다.
+- `form` 안 컨트롤의 `name`이나 `id`가 DOM 프로퍼티 이름과 같으면 `form`의 프로퍼티가 가려진다(DOM clobbering). `<form><input name="nodeType"></form>`은 `form`이 통째로 사라지고, `name="tagName"`은 `TypeError`가 난다. 막으려면 모든 DOM 접근을 프로토타입을 거치게 바꿔야 하는데 코드가 복잡해지고 jsdom으로 테스트할 수 없으므로, 범위 밖으로 둔다.
 
 ## 확정한 결정
 
@@ -184,3 +198,22 @@ JSDoc은 `_`로 시작하는 파일을 기본으로 제외하므로, `src/`의 �
 
 - 테스트 영역을 렌더링할 때는 `vdomToHtml`로 Virtual DOM을 HTML 문자열로 바꿔 `textarea`에 넣고, 미리보기도 같은 내용으로 그린다.
 - 테스트 영역을 Virtual DOM으로 변환할 때는 `htmlToVdom`으로 `textarea`의 HTML 문자열을 변환한다.
+
+### setProp
+속성을 넣는 코드를 `createDom.js`의 `setProp(element, name, value)` 한 곳에 둔다.
+`createDom`과 `patch`가 이 함수를 함께 쓴다.
+
+이유: 속성을 넣는 경로가 둘로 갈라지면 처음 그린 화면과 Patch한 화면이 다르게 동작할 수 있다.
+Phase 2의 `onClick`도 이 함수만 확장하면 된다.
+
+### domToVdom의 반환값
+제외 대상 노드는 `null`을 돌려주고, 호출하는 쪽에서 걸러 낸다.
+
+이유: 노드 하나를 변환하는 일과 자식 목록을 정리하는 일을 나눠서, 텍스트 합치기를 자식 목록을 만드는 쪽 한 곳에서 처리한다.
+
+### 요소 사이 공백
+공백만 있는 텍스트 중 줄바꿈이 포함된 것만 지우고, 같은 줄의 공백은 유지한다.
+
+이유: `<b>a</b> <i>b</i>`의 공백을 지우면 화면에 `a b`가 `ab`로 나온다.
+샘플 HTML의 들여쓰기는 줄바꿈을 포함하므로 그대로 지워진다.
+대신 요소를 줄을 바꿔 쓰면 브라우저와 달리 공백 없이 붙어서 나온다.
