@@ -1,3 +1,13 @@
+## Classes
+
+<dl>
+<dt><a href="#StateHistory">StateHistory</a></dt>
+<dd><p>Virtual DOM의 기록을 리스트와 현재 위치를 가리키는 포인터로 관리한다.
+Virtual DOM은 만든 뒤 수정하지 않는 값이므로 복사하지 않고 받은 객체를 그대로 저장하고 돌려준다.
+같은 내용인지는 판단하지 않는다. 변경이 없을 때 저장하지 않는 일은 호출하는 쪽이 맡는다.</p>
+</dd>
+</dl>
+
 ## Functions
 
 <dl>
@@ -42,6 +52,12 @@
 <code>&lt;p&gt;</code> 같은 일반 요소나 <code>&lt;td&gt;</code> 뒤의 <code>&lt;tr&gt;</code>은 태그가 버려지고 내용만 남으며, <code>&lt;col&gt;</code> 뒤의 내용은 통째로 버려진다.
 닫지 않은 태그 같은 일반적인 잘못된 입력은 파서가 고쳐서 읽는다.</p>
 </dd>
+<dt><a href="#patch">patch(container, changes)</a> ⇒ <code>void</code></dt>
+<dd><p>변경 목록을 받은 순서대로 실제 DOM에 적용한다.
+목록에 없는 노드는 건드리지 않으므로 같은 DOM 객체로 남는다.
+<code>changes</code>는 <code>container</code>의 내용을 나타내는 루트 Virtual DOM과 새 루트를 <code>diff</code>로 비교한 결과여야 한다.
+<code>path</code>가 맞으려면 <code>container</code>의 <code>childNodes</code>와 이전 Virtual DOM의 <code>children</code>이 번호까지 일치해야 한다.</p>
+</dd>
 </dl>
 
 ## Typedefs
@@ -59,6 +75,54 @@
 </dd>
 </dl>
 
+<a name="StateHistory"></a>
+
+## StateHistory
+Virtual DOM의 기록을 리스트와 현재 위치를 가리키는 포인터로 관리한다.
+Virtual DOM은 만든 뒤 수정하지 않는 값이므로 복사하지 않고 받은 객체를 그대로 저장하고 돌려준다.
+같은 내용인지는 판단하지 않는다. 변경이 없을 때 저장하지 않는 일은 호출하는 쪽이 맡는다.
+
+**Kind**: global class  
+
+* [StateHistory](#StateHistory)
+    * [.push(vdom)](#StateHistory+push) ⇒ <code>void</code>
+    * [.current()](#StateHistory+current) ⇒ [<code>VNode</code>](#VNode) \| <code>undefined</code>
+    * [.back()](#StateHistory+back) ⇒ [<code>VNode</code>](#VNode) \| <code>null</code>
+    * [.forward()](#StateHistory+forward) ⇒ [<code>VNode</code>](#VNode) \| <code>null</code>
+
+<a name="StateHistory+push"></a>
+
+### stateHistory.push(vdom) ⇒ <code>void</code>
+Virtual DOM을 저장하고 현재 위치로 삼는다.
+뒤로 간 상태에서 저장하면 포인터 뒤의 기록은 지워져서 다시 앞으로 갈 수 없다.
+
+**Kind**: instance method of [<code>StateHistory</code>](#StateHistory)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| vdom | [<code>VNode</code>](#VNode) | 저장할 Virtual DOM |
+
+<a name="StateHistory+current"></a>
+
+### stateHistory.current() ⇒ [<code>VNode</code>](#VNode) \| <code>undefined</code>
+현재 위치의 Virtual DOM을 돌려준다. 포인터는 옮기지 않는다.
+
+**Kind**: instance method of [<code>StateHistory</code>](#StateHistory)  
+**Returns**: [<code>VNode</code>](#VNode) \| <code>undefined</code> - 현재 Virtual DOM. 저장한 항목이 없으면 `undefined`이다.  
+<a name="StateHistory+back"></a>
+
+### stateHistory.back() ⇒ [<code>VNode</code>](#VNode) \| <code>null</code>
+포인터를 이전 항목으로 옮기고 그 값을 돌려준다.
+
+**Kind**: instance method of [<code>StateHistory</code>](#StateHistory)  
+**Returns**: [<code>VNode</code>](#VNode) \| <code>null</code> - 이전 Virtual DOM. 이전 항목이 없으면 `null`이고 포인터는 그대로이다.  
+<a name="StateHistory+forward"></a>
+
+### stateHistory.forward() ⇒ [<code>VNode</code>](#VNode) \| <code>null</code>
+포인터를 다음 항목으로 옮기고 그 값을 돌려준다.
+
+**Kind**: instance method of [<code>StateHistory</code>](#StateHistory)  
+**Returns**: [<code>VNode</code>](#VNode) \| <code>null</code> - 다음 Virtual DOM. 다음 항목이 없으면 `null`이고 포인터는 그대로이다.  
 <a name="setProp"></a>
 
 ## setProp(element, name, value) ⇒ <code>void</code>
@@ -197,6 +261,25 @@ HTML 문자열을 루트 Virtual DOM으로 바꾼다.
 | Param | Type | Description |
 | --- | --- | --- |
 | html | <code>string</code> | 변환할 HTML 문자열 |
+
+<a name="patch"></a>
+
+## patch(container, changes) ⇒ <code>void</code>
+변경 목록을 받은 순서대로 실제 DOM에 적용한다.
+목록에 없는 노드는 건드리지 않으므로 같은 DOM 객체로 남는다.
+`changes`는 `container`의 내용을 나타내는 루트 Virtual DOM과 새 루트를 `diff`로 비교한 결과여야 한다.
+`path`가 맞으려면 `container`의 `childNodes`와 이전 Virtual DOM의 `children`이 번호까지 일치해야 한다.
+
+**Kind**: global function  
+**Throws**:
+
+- <code>Error</code> 노드나 속성을 만들지 못하면 `createDom`과 `setProp`의 오류를 그대로 던진다. 이미 적용한 변경은 되돌리지 않으므로, 호출하는 쪽에서 `renderRoot`로 이전 Virtual DOM을 다시 그려야 한다.
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| container | <code>Element</code> | 변경을 적용할 영역 |
+| changes | [<code>Array.&lt;Change&gt;</code>](#Change) | `diff`가 돌려준 변경 목록 |
 
 <a name="Change"></a>
 
