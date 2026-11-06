@@ -186,7 +186,7 @@ JSDoc은 `_`로 시작하는 파일을 기본으로 제외하므로, `src/`의 �
 - 공백 규칙은 태그와 상관없이 적용한다. `<pre>`와 `<textarea>`처럼 공백이 의미를 갖는 요소에서도 줄바꿈이 포함된 공백만 있는 텍스트는 지워진다.
 - 주석 사이의 줄바꿈도 지운 뒤 텍스트를 합치므로, `a<!--x-->
 <!--y-->b`는 `ab`가 된다.
-- `form` 안 컨트롤의 `name`이나 `id`가 DOM 프로퍼티 이름과 같으면 `form`의 프로퍼티가 가려진다(DOM clobbering). `<form><input name="nodeType"></form>`은 `form`이 통째로 사라지고, `name="tagName"`은 `TypeError`가 난다. 막으려면 모든 DOM 접근을 프로토타입을 거치게 바꿔야 하는데 코드가 복잡해지고 jsdom으로 테스트할 수 없으므로, 범위 밖으로 둔다.
+- `form` 안 컨트롤의 `name`이나 `id`가 DOM 프로퍼티 이름과 같으면 `form`의 프로퍼티가 가려진다(DOM clobbering). `<form><input name="nodeType"></form>`은 `form`이 통째로 사라지고, `name="tagName"`은 `TypeError`가 난다. `<img name="createElement">`처럼 `document`의 메서드가 가려지는 경우도 같아서, 페이지를 새로 고칠 때까지 요소를 만들 수 없다. 막으려면 모든 DOM 접근을 프로토타입을 거치게 바꿔야 하고, `form`의 경우는 jsdom으로 테스트할 수도 없다. 드문 입력을 위해 코드가 복잡해지므로 범위 밖으로 둔다.
 
 ## 확정한 결정
 
