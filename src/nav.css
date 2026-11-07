@@ -1,0 +1,32 @@
+.page-nav {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.page-nav a {
+  padding: 6px 12px;
+  border: 1px solid var(--color-outline-2, #0000001a);
+  border-radius: 8px;
+  color: var(--color-on-view-2, #373737cc);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  text-decoration: none;
+  background: var(--color-background, #ffffff);
+}
+
+.page-nav a:hover {
+  background: var(--color-overlay, #0000000d);
+}
+
+.page-nav a[aria-current="page"] {
+  border-color: var(--color-primary, #ff5d00);
+  background: var(--color-primary, #ff5d00);
+  color: var(--color-on-primary, #ffffff);
+}
+
+.page-nav a:focus-visible {
+  outline: 2px solid var(--color-primary, #ff5d00);
+  outline-offset: 2px;
+}
