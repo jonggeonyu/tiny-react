@@ -1,6 +1,10 @@
 ## Classes
 
 <dl>
+<dt><a href="#FunctionComponent">FunctionComponent</a></dt>
+<dd><p>함수형 루트 컴포넌트를 감싸 Hook 칸과 화면을 관리한다.
+렌더 순서는 컴포넌트 실행, 새 Virtual DOM 생성, <code>diff</code>, <code>patch</code>이다.</p>
+</dd>
 <dt><a href="#StateHistory">StateHistory</a></dt>
 <dd><p>Virtual DOM의 기록을 리스트와 현재 위치를 가리키는 포인터로 관리한다.
 Virtual DOM은 만든 뒤 수정하지 않는 값이므로 복사하지 않고 받은 객체를 그대로 저장하고 돌려준다.
@@ -64,7 +68,23 @@ Virtual DOM은 만든 뒤 수정하지 않는 값이므로 복사하지 않고 �
 <dt><a href="#h">h(type, props, ...children)</a> ⇒ <code><a href="#VNode">VNode</a></code> | <code>*</code></dt>
 <dd><p>Virtual DOM 노드를 만든다. JSX 대신 쓴다.
 <code>type</code>이 함수이면 <code>type({ ...props, children })</code>을 바로 호출해 결과를 돌려준다.
-이때 <code>props</code>는 정규화하지 않고 <code>children</code>만 정규화한다.</p>
+이때 <code>props</code>는 정규화하지 않고 <code>children</code>만 정규화한다.
+자식 컴포넌트를 실행하는 동안에는 Hook을 쓸 수 없다.</p>
+</dd>
+<dt><a href="#withCurrentComponent">withCurrentComponent(component, run)</a> ⇒ <code>*</code></dt>
+<dd><p><code>run</code>을 실행하는 동안 현재 컴포넌트를 정한다.
+끝나면 성공과 실패에 상관없이 이전 값으로 되돌린다. 렌더 밖에서 부르면 이전 값은 <code>null</code>이다.</p>
+</dd>
+<dt><a href="#withoutHooks">withoutHooks(run)</a> ⇒ <code>*</code></dt>
+<dd><p><code>run</code>을 실행하는 동안 현재 컴포넌트를 비워 Hook을 쓰지 못하게 한다.
+<code>h</code>가 자식 컴포넌트를 실행할 때 쓴다. 끝나면 루트 컴포넌트가 다시 현재 컴포넌트가 된다.</p>
+</dd>
+<dt><a href="#useState">useState(initial)</a> ⇒ <code>Array</code></dt>
+<dd><p>렌더 사이에 유지되는 상태를 만든다. 루트 컴포넌트의 렌더 중에만 호출할 수 있다.
+<code>setState(next)</code>는 <code>next</code>가 함수이면 <code>next(이전 값)</code>으로 새 값을 구한다.
+값이 <code>Object.is</code>로 같고 직전 <code>update()</code>가 성공했으면 아무것도 하지 않고, 아니면 칸의 값을 바로 바꾼 뒤 <code>update()</code>를 예약한다.
+화면은 <code>setState</code> 직후가 아니라 마이크로태스크에서 바뀐다.
+함수 초기값을 호출하는 지연 초기값은 지원하지 않는다.</p>
 </dd>
 <dt><a href="#vdomToHtml">vdomToHtml(root)</a> ⇒ <code>string</code></dt>
 <dd><p>루트 Virtual DOM을 HTML 문자열로 바꾼다.
@@ -112,6 +132,63 @@ Virtual DOM은 만든 뒤 수정하지 않는 값이므로 복사하지 않고 �
 </dd>
 </dl>
 
+<a name="FunctionComponent"></a>
+
+## FunctionComponent
+함수형 루트 컴포넌트를 감싸 Hook 칸과 화면을 관리한다.
+렌더 순서는 컴포넌트 실행, 새 Virtual DOM 생성, `diff`, `patch`이다.
+
+**Kind**: global class  
+
+* [FunctionComponent](#FunctionComponent)
+    * [new FunctionComponent(component, container, [options])](#new_FunctionComponent_new)
+    * [.mount()](#FunctionComponent+mount) ⇒ <code>void</code>
+    * [.update()](#FunctionComponent+update) ⇒ <code>void</code>
+    * [.scheduleUpdate()](#FunctionComponent+scheduleUpdate) ⇒ <code>void</code>
+
+<a name="new_FunctionComponent_new"></a>
+
+### new FunctionComponent(component, container, [options])
+
+| Param | Type | Description |
+| --- | --- | --- |
+| component | <code>function</code> | 루트 컴포넌트 함수. `{}`를 받아 화면 내용을 돌려준다. |
+| container | <code>Element</code> | 화면을 그릴 영역. 영역의 내용만 바뀌고 영역 자체는 그대로이다. |
+| [options] | <code>object</code> | 선택 값 |
+| [options.onCommit] | <code>function</code> | 화면 반영 뒤에 쓸 함수. 지금은 저장만 하고 호출하지 않는다. |
+
+<a name="FunctionComponent+mount"></a>
+
+### functionComponent.mount() ⇒ <code>void</code>
+처음 렌더해서 영역의 내용을 그린다.
+실패하면 마운트되지 않은 상태로 남고 영역의 내용은 그대로이다.
+
+**Kind**: instance method of [<code>FunctionComponent</code>](#FunctionComponent)  
+**Throws**:
+
+- <code>Error</code> 렌더 중에 호출했거나, 이미 마운트했거나, 렌더 또는 그리기가 실패하면 던진다.
+
+<a name="FunctionComponent+update"></a>
+
+### functionComponent.update() ⇒ <code>void</code>
+다시 렌더해서 바뀐 부분만 화면에 반영한다.
+렌더가 실패하면 화면과 `vdom`은 그대로이다.
+`patch`가 실패하면 이전 `vdom`으로 영역을 다시 그리고, `vdom`은 갱신하지 않는다.
+렌더나 `patch`가 실패하면 `isStale`이 `true`가 되고, 성공하면 `false`가 된다.
+
+**Kind**: instance method of [<code>FunctionComponent</code>](#FunctionComponent)  
+**Throws**:
+
+- <code>Error</code> 렌더 중에 호출했거나, 마운트 전이거나, 렌더 또는 `patch`가 실패하면 던진다.
+
+<a name="FunctionComponent+scheduleUpdate"></a>
+
+### functionComponent.scheduleUpdate() ⇒ <code>void</code>
+`update()`를 마이크로태스크로 예약한다. 이미 예약되어 있으면 아무것도 하지 않는다.
+한 핸들러의 여러 `setState`가 렌더 한 번으로 묶인다.
+`update()`의 오류는 마이크로태스크에서 던져지므로 호출한 쪽으로 돌아오지 않는다.
+
+**Kind**: instance method of [<code>FunctionComponent</code>](#FunctionComponent)  
 <a name="StateHistory"></a>
 
 ## StateHistory
@@ -327,6 +404,7 @@ DOM 노드 하나를 Virtual DOM으로 변환한다.
 Virtual DOM 노드를 만든다. JSX 대신 쓴다.
 `type`이 함수이면 `type({ ...props, children })`을 바로 호출해 결과를 돌려준다.
 이때 `props`는 정규화하지 않고 `children`만 정규화한다.
+자식 컴포넌트를 실행하는 동안에는 Hook을 쓸 수 없다.
 
 **Kind**: global function  
 **Returns**: [<code>VNode</code>](#VNode) \| <code>\*</code> - 문자열 `type`이면 `{ type, props, children }`, 함수 `type`이면 그 함수의 반환값  
@@ -340,6 +418,53 @@ Virtual DOM 노드를 만든다. JSX 대신 쓴다.
 | type | <code>string</code> \| <code>function</code> | 태그 이름 또는 자식 컴포넌트 함수 |
 | props | <code>Object</code> | 속성. `null`이나 `undefined`이면 `{}`로 본다. |
 | ...children | <code>\*</code> | 자식들 |
+
+<a name="withCurrentComponent"></a>
+
+## withCurrentComponent(component, run) ⇒ <code>\*</code>
+`run`을 실행하는 동안 현재 컴포넌트를 정한다.
+끝나면 성공과 실패에 상관없이 이전 값으로 되돌린다. 렌더 밖에서 부르면 이전 값은 `null`이다.
+
+**Kind**: global function  
+**Returns**: <code>\*</code> - `run`의 반환값  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| component | [<code>FunctionComponent</code>](#FunctionComponent) | 현재 컴포넌트로 정할 인스턴스 |
+| run | <code>function</code> | 실행할 함수 |
+
+<a name="withoutHooks"></a>
+
+## withoutHooks(run) ⇒ <code>\*</code>
+`run`을 실행하는 동안 현재 컴포넌트를 비워 Hook을 쓰지 못하게 한다.
+`h`가 자식 컴포넌트를 실행할 때 쓴다. 끝나면 루트 컴포넌트가 다시 현재 컴포넌트가 된다.
+
+**Kind**: global function  
+**Returns**: <code>\*</code> - `run`의 반환값  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| run | <code>function</code> | 실행할 함수 |
+
+<a name="useState"></a>
+
+## useState(initial) ⇒ <code>Array</code>
+렌더 사이에 유지되는 상태를 만든다. 루트 컴포넌트의 렌더 중에만 호출할 수 있다.
+`setState(next)`는 `next`가 함수이면 `next(이전 값)`으로 새 값을 구한다.
+값이 `Object.is`로 같고 직전 `update()`가 성공했으면 아무것도 하지 않고, 아니면 칸의 값을 바로 바꾼 뒤 `update()`를 예약한다.
+화면은 `setState` 직후가 아니라 마이크로태스크에서 바뀐다.
+함수 초기값을 호출하는 지연 초기값은 지원하지 않는다.
+
+**Kind**: global function  
+**Returns**: <code>Array</code> - `[값, setState]`. `setState`는 렌더마다 같은 함수이다.  
+**Throws**:
+
+- <code>Error</code> 렌더 밖이나 자식 컴포넌트에서 호출했거나, Hook 개수나 종류가 첫 렌더와 다르면 던진다. `setState`는 렌더 중에 호출하면 던진다.
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| initial | <code>\*</code> | 첫 렌더에서 쓸 초기값 |
 
 <a name="vdomToHtml"></a>
 

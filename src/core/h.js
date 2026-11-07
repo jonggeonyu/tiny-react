@@ -1,3 +1,5 @@
+import { withoutHooks } from './hooks.js';
+
 /**
  * 자식 목록을 Virtual DOM 자식 배열로 정리한다.
  * 문자열과 요소는 그대로 두고, 숫자는 문자열로 바꾸며, `null`, `undefined`, `true`, `false`는 버린다.
@@ -48,6 +50,7 @@ function normalizeProps(props) {
  * Virtual DOM 노드를 만든다. JSX 대신 쓴다.
  * `type`이 함수이면 `type({ ...props, children })`을 바로 호출해 결과를 돌려준다.
  * 이때 `props`는 정규화하지 않고 `children`만 정규화한다.
+ * 자식 컴포넌트를 실행하는 동안에는 Hook을 쓸 수 없다.
  *
  * @param {string|Function} type 태그 이름 또는 자식 컴포넌트 함수
  * @param {?Object} props 속성. `null`이나 `undefined`이면 `{}`로 본다.
@@ -59,7 +62,7 @@ export function h(type, props, ...children) {
   const normalized = normalizeChildren(children);
 
   if (typeof type === 'function') {
-    return type({ ...(props ?? {}), children: normalized });
+    return withoutHooks(() => type({ ...(props ?? {}), children: normalized }));
   }
 
   return { type, props: normalizeProps(props ?? {}), children: normalized };
