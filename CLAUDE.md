@@ -47,3 +47,11 @@ Phase 1은 Virtual DOM, Diff, Patch이고, Phase 2는 Component, State, Hooks이
 - Virtual DOM, Diff, Patch, Hook은 `core-builder`에게 맡긴다.
 - 구현 단위가 끝나면 `verifier`에게 검증을 맡긴다.
 - `verifier`에게는 구현 과정을 설명하지 않고, 검증할 범위만 알려 준다.
+
+## 토큰과 속도
+- Phase가 바뀌면 새 세션에서 시작한다. 이어 갈 내용은 문서와 커밋에 남긴다.
+- 에이전트의 기본은 Sonnet, 중간 강도이다. Diff, Patch, Hook처럼 어려운 단위만 호출할 때 `model: opus`, `effort: high`를 지정한다.
+- 고의 결함 검사는 `verifier`만 한다. 무작위 검사는 1,000건을 넘기지 않는다.
+- 에이전트 보고는 문제와 결론만 20줄 이내로 받는다. 긴 근거는 꼭 필요할 때만 저장소 밖 단위별 파일에 이어 쓴다.
+- Critical과 Important는 그 단위 안에서 고친다. Minor는 모아서 Phase 끝에 한 번에 고친다.
+- `DESIGN.md` 같은 큰 문서는 전체를 읽지 않는다. 필요한 절이나 값만 찾아 담당에게 넘긴다.
