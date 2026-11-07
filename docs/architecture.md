@@ -1,6 +1,6 @@
 # 설계
 
-이 문서는 Phase 1의 설계이다. 과제 요구사항은 `docs/requirements.md`에 있다.
+이 문서는 Phase 1과 Phase 2의 설계이다. Phase 2는 맨 아래의 `Phase 2 설계`에 있다. 과제 요구사항은 `docs/requirements.md`에 있다.
 
 JavaScript로 구현한다.
 
@@ -191,7 +191,7 @@ JSDoc은 `_`로 시작하는 파일을 기본으로 제외하므로, `src/`의 �
 - `key`를 쓰는 목록 비교는 요구사항에 없으므로 구현하지 않는다.
 - `{ a: '1', A: '1' }`처럼 대소문자만 다른 속성 이름이 함께 있는 `props`는 지원하지 않는다. HTML 속성 이름은 대소문자를 구분하지 않고, 파서는 이런 `props`를 만들지 않는다.
 - SVG처럼 네임스페이스가 필요한 요소는 지원하지 않는다.
-- `input`의 `value`처럼 속성이 아닌 프로퍼티는 비교하지 않는다.
+- `diff`는 Virtual DOM끼리만 비교하므로, 사용자가 `input`에 입력한 값처럼 실제 DOM에만 있는 값은 비교하지 않는다.
 - 실제 영역은 `patch`와 `renderRoot`로만 바뀐다고 전제한다. `<details>`를 클릭해 생긴 `open`이나 `contenteditable`로 고친 내용처럼 사용자가 실제 영역을 직접 바꾸면 Virtual DOM과 어긋난다. `diff`는 Virtual DOM끼리만 비교하므로 이 어긋남을 찾지 못한다. `MutationObserver`로 감지할 수는 있지만 요구사항에 없어 구현하지 않는다.
 - 실제 영역과 미리보기가 같은 문서에 있으므로, 같은 `name`의 라디오 버튼은 한 그룹이 되어 `checked` 상태가 한쪽에만 남는다.
 - 사용자가 입력 중인 `textarea`의 HTML은 정렬하지 않는다. Patch는 `textarea`를 다시 쓰지 않고, 정렬은 페이지 로드와 뒤로가기, 앞으로가기에서만 일어난다.
@@ -250,7 +250,7 @@ HTML 편집기는 코딩 도구처럼 어두운 표면으로 두고, 줄을 자�
 
 이유: 속성을 넣는 경로가 둘로 갈라지면 처음 그린 화면과 Patch한 화면이 다르게 동작할 수 있다.
 Phase 2에서 이벤트와 프로퍼티를 넣는 쪽은 이 함수에서 확장한다.
-다만 지우는 쪽은 `patch`가 `removeAttribute`를 직접 부르고 `setProp`은 이전 값을 받지 않으므로, `setProp`만 확장해서는 이전 핸들러를 지울 수 없다. 지우는 경로는 Phase 2 설계에서 함께 정한다.
+지우는 쪽은 `removeProp`을 추가해서 처리한다. `Phase 2 설계`의 `속성과 이벤트`에 있다.
 
 ### domToVdom의 반환값
 제외 대상 노드는 `null`을 돌려주고, 호출하는 쪽에서 걸러 낸다.
@@ -264,10 +264,180 @@ Phase 2에서 이벤트와 프로퍼티를 넣는 쪽은 이 함수에서 확장
 샘플 HTML의 들여쓰기는 줄바꿈을 포함하므로 그대로 지워진다.
 대신 요소를 줄을 바꿔 쓰면 브라우저와 달리 공백 없이 붙어서 나온다.
 
-## Phase 2로 넘기는 항목
-Phase 1 최종 리뷰에서 나온 내용이다. Phase 2 설계에서 정한다.
+## Phase 1에서 넘긴 항목
+Phase 1 최종 리뷰에서 나온 내용이고, Phase 2 설계에서 아래처럼 정했다.
 
-- 속성을 지우는 경로: `onClick`처럼 속성이 아닌 값은 `removeAttribute`로 지워지지 않는다.
-- 자식 정규화: core는 자식으로 문자열과 요소만 받는다. `undefined`, `null`, 숫자, `items.map`의 중첩 배열은 Virtual DOM을 만들 때 정리해야 한다.
-- 루트 감싸기: 컴포넌트 결과를 `type: 'root'` 노드로 감싸지 않으면 `path: []`의 `REPLACE`가 나와 마운트 영역 자체가 교체된다.
-- `input`의 `value`와 `checked`: 입력 뒤 값을 비우려면 속성이 아니라 프로퍼티로 다뤄야 한다.
+| 항목 | 문제 | 결정한 곳 |
+|---|---|---|
+| 속성을 지우는 경로 | `onClick`처럼 속성이 아닌 값은 `removeAttribute`로 지워지지 않는다. | `속성과 이벤트`의 `removeProp` |
+| 자식 정규화 | core는 자식으로 문자열과 요소만 받는다. | `h: Virtual DOM 생성` |
+| 루트 감싸기 | 감싸지 않으면 `path: []`의 `REPLACE`가 나와 마운트 영역 자체가 교체된다. | `FunctionComponent` |
+| `input`의 `value`와 `checked` | 입력 뒤 값을 비우려면 프로퍼티로 다뤄야 한다. | `속성과 이벤트`의 `setProp` |
+
+## Phase 2 설계
+
+### 구조
+렌더링 순서는 컴포넌트 실행, 새 Virtual DOM 생성, Diff, Patch, effect 실행이다.
+
+```text
+h(type, props, ...children)   Virtual DOM 생성. 자식 컴포넌트를 실행하고 값을 정규화함
+FunctionComponent             hooks 배열, mount(), update()
+useState, useEffect, useMemo  현재 렌더 중인 FunctionComponent의 hooks 칸을 씀
+setProp, removeProp           속성, 프로퍼티, 이벤트를 넣고 지움
+diff, patch, renderRoot       Phase 1 코드를 그대로 씀
+```
+
+`diff`는 동작을 바꾸지 않는다. 함수 값이 들어오는 만큼 타입 주석만 고친다.
+core의 기존 코드에서 동작이 바뀌는 곳은 `setProp`과, `patch`가 `removeAttribute` 대신 `removeProp`을 부르는 부분뿐이다.
+
+```text
+phase2.html                  Phase 2 테스트 페이지
+src/
+├── core/
+│   ├── h.js                 h, normalizeChildren
+│   ├── hooks.js             useState, useEffect, useMemo
+│   └── FunctionComponent.js
+└── phase2/                  Phase 2 페이지 전용 코드
+```
+
+새 파일은 Phase 2 페이지를 몰라야 하므로 `src/core/`에 둔다.
+
+### h: Virtual DOM 생성
+JSX 대신 `h(type, props, ...children)`을 쓴다.
+
+이유: JSX는 빌드 설정이 필요하고, 과제는 Vanilla JavaScript로 구현한다.
+
+- `props`가 `null`이나 `undefined`이면 `{}`로 본다.
+- `type`이 문자열이면 `{ type, props, children }`을 돌려준다. 속성과 자식을 아래 규칙으로 정규화한다.
+- `type`이 함수이면 그 자리에서 `type({ ...props, children })`을 호출하고 결과를 돌려준다. 자식 컴포넌트의 `props`는 정규화하지 않고, `children`만 정규화해서 넘긴다.
+
+이유: 자식 컴포넌트는 상태가 없는 순수 함수이므로 바로 실행해도 된다. Virtual DOM에는 태그만 남아서 `{ type, props, children }` 형태를 지키고, `diff`는 컴포넌트를 몰라도 된다.
+자식 컴포넌트가 배열이나 `null`을 돌려줘도 부모의 자식 정규화가 처리한다.
+
+`normalizeChildren(children)`의 규칙은 다음과 같다.
+
+| 값 | 처리 |
+|---|---|
+| 문자열, 요소 | 그대로 둔다. 빈 문자열도 텍스트이므로 남긴다. |
+| 숫자 | 문자열로 바꾼다. `0`도 화면에 나온다. |
+| `null`, `undefined`, `true`, `false` | 버린다. |
+| 배열 | 재귀로 펼친다. |
+| 그 밖의 객체와 함수 | `TypeError`를 던진다. 그대로 두면 `createDom`이 알아보기 어려운 오류를 낸다. |
+
+나란히 있는 문자열은 합치지 않는다. `createDom`이 자식마다 노드 하나를 만들므로 `path`는 어긋나지 않고, 바뀐 텍스트만 갱신된다.
+
+속성의 규칙은 다음과 같다.
+
+| 값 | 처리 |
+|---|---|
+| `null`, `undefined`, `false` | 버린다. `diff`가 사라진 속성으로 잡아 `removeProp`을 부른다. |
+| `true` | `''`로 바꾼다. 파서가 `<input checked>`를 `checked: ''`로 만드는 것과 같다. |
+| 숫자 | 문자열로 바꾼다. |
+| 문자열, 함수 | 그대로 둔다. |
+
+이유: `setAttribute('disabled', false)`는 `disabled="false"`를 만들어 실제로 비활성화된다.
+
+### FunctionComponent
+`new FunctionComponent(component, container)`로 만든다.
+
+- `hooks`: Hook 칸의 배열이다. 인스턴스마다 따로 있다.
+- `hookIndex`: 지금 몇 번째 Hook인지 가리킨다. 렌더를 시작할 때 0으로 되돌린다.
+- `vdom`: 지금 화면의 루트 Virtual DOM이다. `patch`가 끝난 뒤에 갱신한다.
+
+렌더는 다음 일을 한다.
+
+1. `hookIndex`를 0으로 되돌리고 실행할 effect 목록을 비운다.
+2. 현재 컴포넌트를 이 인스턴스로 정하고, 컴포넌트 함수를 `{}`와 함께 호출한다.
+3. 호출이 끝나면 성공과 실패에 상관없이 현재 컴포넌트를 비운다.
+4. 결과를 `{ type: 'root', props: {}, children: normalizeChildren([result]) }`로 감싼다.
+
+이유: 맨 위 노드가 항상 같아야 `path: []`의 `REPLACE`가 나오지 않는다. 컴포넌트가 배열이나 `null`을 돌려줘도 처리할 수 있다.
+
+`mount()`는 렌더, `renderRoot`, `vdom` 저장, effect 실행 순서이다.
+`update()`는 렌더, `diff`, `patch`, `vdom` 저장, effect 실행 순서이다.
+
+- 이미 마운트한 인스턴스의 `mount()`와, 마운트 전의 `update()`는 오류를 던진다.
+- 변경 목록이 비어 있어도 effect는 실행한다. 화면이 같아도 deps는 바뀔 수 있다.
+- `patch`가 실패하면 Phase 1처럼 이전 `vdom`을 `renderRoot`로 다시 그리고 오류를 던진다. `vdom`은 갱신하지 않고 effect는 실행하지 않는다.
+- 렌더가 실패하면 화면과 `vdom`은 그대로 두고 오류를 던진다.
+
+`unmount()`는 요구사항에 없으므로 만들지 않는다.
+
+### Hook 공통
+`hooks.js`의 모듈 변수에 지금 렌더 중인 `FunctionComponent`를 둔다. 렌더 밖에서는 비어 있다.
+칸은 `{ kind, ... }` 형태이고 `kind`는 `'state'`, `'effect'`, `'memo'` 중 하나이다.
+첫 렌더에서만 칸을 만들고, 이후에는 `hookIndex`로 칸을 찾는다.
+
+Hook 규칙을 어기면 값이 조용히 어긋나서 찾기 어려우므로, 아래 경우에 오류를 던진다.
+
+- 현재 컴포넌트가 없을 때 Hook을 호출했다. 렌더 밖이거나 자식 컴포넌트 안이다. `h`는 자식 컴포넌트를 실행하는 동안 현재 컴포넌트를 비운다.
+- 칸의 `kind`와 호출한 Hook이 다르다.
+- 첫 렌더가 아닌데 칸이 없거나, 렌더가 끝났을 때 `hookIndex`가 `hooks.length`와 다르다.
+
+### useState와 Batching
+`useState(initial)`은 `[값, setState]`를 돌려준다. `setState`는 칸을 만들 때 한 번만 만들어 재사용한다.
+지연 초기값은 요구사항에 없으므로 지원하지 않는다.
+
+`setState(next)`는 다음 순서로 동작한다.
+
+1. 렌더 중이면 오류를 던진다. 렌더 중의 상태 변경은 끝없는 렌더가 되기 쉽다.
+2. `next`가 함수이면 `next(hook.state)`로 새 값을 구한다.
+3. 새 값이 `Object.is`로 같으면 끝낸다.
+4. 칸의 값을 바꾸고 `update()`를 예약한다.
+
+예약은 `isScheduled`와 `queueMicrotask`로 한다. 이미 예약되어 있으면 아무것도 하지 않는다.
+마이크로태스크에서는 `isScheduled`를 먼저 `false`로 되돌린 뒤 `update()`를 호출한다. `update()`가 실패해도 다음 `setState`가 다시 예약할 수 있다.
+
+이유: 한 핸들러의 여러 `setState`를 렌더 한 번으로 묶고, 절반만 바뀐 상태로 렌더하지 않는다. effect 안의 `setState`가 렌더 도중에 렌더를 일으키는 재진입도 없어진다.
+대가로 `setState` 직후에는 화면이 바뀌지 않으므로, 단위 테스트는 `await`로 기다려야 한다.
+
+effect가 `setState`를 계속 부르면 마이크로태스크가 끝나지 않아 탭이 멈춘다.
+그래서 effect를 실행하는 동안 예약한 횟수를 세고, 연속 50번을 넘으면 오류를 던진다. effect 밖에서 예약하면 횟수를 0으로 되돌린다.
+
+### useEffect
+`useEffect(effect, deps)`는 렌더 중에 deps만 비교하고, 달라졌으면 실행 목록에 넣는다.
+effect 안에서 DOM을 읽을 수 있어야 하므로 실행은 `patch` 뒤에 한다.
+
+- deps가 없으면 렌더마다 실행한다.
+- deps 비교는 항목별 `Object.is`이다. 길이가 다르면 달라진 것으로 본다.
+- 칸의 deps는 effect를 실행할 때 저장한다. 렌더나 `patch`가 실패해 effect가 실행되지 않으면 다음 렌더에서 다시 실행 목록에 들어간다.
+- 실행할 때는 실행 목록을 먼저 비운 뒤, 이전 cleanup을 모두 실행하고, effect를 차례로 실행한다.
+- effect가 함수를 돌려주면 cleanup으로 저장하고, 함수가 아니면 cleanup을 비운다.
+
+`unmount()`가 없으므로 마지막 cleanup은 실행되지 않는다.
+실제 React와 달리 effect는 화면을 그리기 전에 동기로 실행한다.
+
+### useMemo
+`useMemo(compute, deps)`는 `useEffect`와 같은 deps 비교 함수를 쓴다.
+달라졌으면 `compute()`를 실행해 값과 deps를 칸에 저장하고, 같으면 저장한 값을 돌려준다. deps가 없으면 렌더마다 계산한다.
+값이 이번 Virtual DOM을 만드는 데 쓰이므로 렌더 중에 실행한다.
+
+### 속성과 이벤트
+`setProp(element, name, value)`는 다음 순서로 동작한다.
+
+1. 값이 함수이고 이름이 `on`으로 시작하면 `element[소문자 이름] = value`를 하고 끝낸다.
+2. `setAttribute`로 속성을 넣는다.
+3. `input`과 `textarea`의 `value`는 프로퍼티와 값이 다를 때 프로퍼티도 맞춘다. `file` 타입은 제외한다.
+4. `input`의 `checked`는 프로퍼티를 `true`로 맞춘다.
+
+`removeProp(element, name)`은 `removeAttribute`를 부른 뒤, `on`으로 시작하는 이름은 프로퍼티를 `null`로, `checked`는 `false`로, `input`과 `textarea`의 `value`는 `''`로 되돌린다. `file` 타입의 `value`는 건드리지 않는다.
+`patch`의 `PROPS`는 `removeAttribute` 대신 이 함수를 부른다. `remove`를 먼저 적용하는 순서는 그대로이다.
+
+이벤트에 `addEventListener`를 쓰지 않는 이유: 핸들러는 렌더마다 새 함수이므로 `setProp`이 계속 호출되고, 이전 함수를 기억해서 떼지 않으면 핸들러가 쌓인다. 프로퍼티 대입은 새 함수가 이전 함수를 교체하므로 이전 값이 필요 없다.
+
+`value`와 `checked`에 속성과 프로퍼티를 함께 넣는 이유: 사용자가 입력한 뒤에는 속성을 바꿔도 화면이 바뀌지 않으므로 프로퍼티가 필요하다. 하지만 프로퍼티만 넣으면 `innerHTML`에 값이 나오지 않아 `vdomToHtml`이 깨진다.
+`checked`를 값 그대로 대입하지 않는 이유: 파서가 만드는 `checked: ''`를 대입하면 `false`가 된다.
+값이 같으면 대입하지 않는 이유: 입력 중인 커서와 한글 조합을 건드리지 않게 하려는 것이다.
+`file` 타입을 제외하는 이유: 빈 문자열이 아닌 값을 대입하면 `InvalidStateError`가 난다.
+
+`onChange`는 브라우저의 `change` 이벤트이므로 React와 달리 입력이 끝났을 때 발생한다. 입력마다 받으려면 `onInput`을 쓴다.
+
+Phase 1 영향: `<textarea value="x">내용</textarea>`처럼 `value` 속성이 있는 `textarea`는 이제 `x`가 화면에 나온다. HTML의 `textarea`에는 `value` 속성이 없으므로 드문 입력이고 보정하지 않는다.
+
+### Phase 2 범위 밖
+- `key`는 Phase 1과 같이 지원하지 않는다. 항목을 지우면 뒤쪽 항목이 번호로 비교된다.
+- `style`은 문자열만 지원한다. 객체를 넣으면 `[object Object]`가 된다.
+- HTML 속성 이름을 그대로 쓴다. `className`이 아니라 `class`이다.
+- `select`의 `value`는 지원하지 않는다. `createDom`이 속성을 자식보다 먼저 넣으므로 옵션이 없을 때 값이 들어가 적용되지 않는다.
+- 상태가 입력을 거부할 때 화면의 값을 되돌리지 않는다. 입력 뒤에도 Virtual DOM이 그대로이면 `diff`가 변경을 찾지 못한다.
+- 위치로 비교하므로 조건부 요소가 앞에서 사라지면 뒤쪽 요소가 교체되어 입력 포커스를 잃을 수 있다. 페이지는 입력창의 위치가 바뀌지 않게 만든다.
