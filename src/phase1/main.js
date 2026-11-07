@@ -74,7 +74,7 @@ function handlePatch() {
 
 /**
  * 실제 영역을 이동할 상태로 바꾼다.
- * 포인터는 이미 옮겨졌으므로, `patch`가 실패하면 현재 Virtual DOM으로 다시 그려서 이동을 마친다.
+ * 포인터는 이미 옮겨졌으므로, `patch`가 실패하면 `target`으로 다시 그려서 이동을 마친다.
  *
  * @private
  * @param {VElement} before 이동 전 루트 Virtual DOM
@@ -85,7 +85,7 @@ function moveActual(before, target) {
   try {
     patch(actual, diff(before, target));
   } catch {
-    renderRoot(actual, history.current());
+    renderRoot(actual, target);
   }
 }
 

@@ -1,13 +1,5 @@
 import { test, expect } from '@playwright/test';
 
-test('페이지에 필요한 요소가 있다', async ({ page }) => {
-  await page.goto('/');
-  for (const id of ['actual', 'source', 'preview', 'patch', 'back', 'forward', 'error']) {
-    await expect(page.locator(`#${id}`)).toBeAttached();
-  }
-  await expect(page.locator('#error')).toHaveAttribute('role', 'alert');
-});
-
 const INITIAL_HTML =
   '<h3 class="title">장보기 목록</h3>' +
   '<p>오늘 살 것을 <strong>적어</strong> 두었다.</p>' +
@@ -65,6 +57,13 @@ test.describe('페이지 동작', () => {
 
   test.afterEach(() => {
     expect(pageErrors).toEqual([]);
+  });
+
+  test('페이지에 필요한 요소가 있다', async ({ page }) => {
+    for (const id of ['actual', 'source', 'preview', 'patch', 'back', 'forward', 'error']) {
+      await expect(page.locator(`#${id}`)).toBeAttached();
+    }
+    await expect(page.locator('#error')).toHaveAttribute('role', 'alert');
   });
 
   test('로드하면 실제 영역이 정리되고 테스트 영역이 같은 내용이 된다', async ({ page }) => {
@@ -226,6 +225,7 @@ test.describe('페이지 동작', () => {
   });
 
   test('patch가 실패하면 실제 영역이 직전 상태로 남고 오류를 보여 준다', async ({ page }) => {
+    // clobbering은 범위 밖 동작이고, 여기서는 복구 경로를 실행하려고 일부러 쓴다.
     const before = '<form class="a"><input name="setAttribute"></form>';
     const failing = '<form class="b"><input name="setAttribute"></form>';
     await patchWith(page, before);
@@ -242,6 +242,7 @@ test.describe('페이지 동작', () => {
   });
 
   test('patch가 일부만 적용하고 실패해도 실제 영역을 직전 상태로 되돌린다', async ({ page }) => {
+    // clobbering은 범위 밖 동작이고, 여기서는 복구 경로를 실행하려고 일부러 쓴다.
     const before = '<p>이전</p><form class="a"><input name="setAttribute"></form>';
     const failing = '<p>이후</p><form class="b"><input name="setAttribute"></form>';
     await patchWith(page, before);
@@ -257,6 +258,7 @@ test.describe('페이지 동작', () => {
   });
 
   test('뒤로가기에서 patch가 실패해도 세 영역이 목표 상태가 된다', async ({ page }) => {
+    // clobbering은 범위 밖 동작이고, 여기서는 복구 경로를 실행하려고 일부러 쓴다.
     const target = '<p>이전</p><form class="a"><input></form>';
     const clobbered = '<p>이후</p><form class="b"><input name="setAttribute"></form>';
     await patchWith(page, target);
@@ -284,57 +286,68 @@ test.describe('페이지 동작', () => {
     await page.locator('#back').click();
     expect(await readScreen(page)).toEqual(syncedScreen(INITIAL_HTML));
   });
-});
 
-const snapshot = (page) =>
-  page.evaluate(() => ({
-    actual: document.querySelector('#actual').innerHTML,
-    preview: document.querySelector('#preview').innerHTML,
-  }));
+  test('긴 문자열이 문서 폭을 넘기지 않는다', async ({ page }) => {
+    await patchWith(page, `<p>${'x'.repeat(600)}</p>`);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
 
-test('긴 문자열이 문서 폭을 넘기지 않는다', async ({ page }) => {
-  await page.goto('/');
-  await patchWith(page, `<p>${'x'.repeat(600)}</p>`);
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
-  expect(overflow).toBeLessThanOrEqual(0);
-});
+  test('파서가 고쳐 주는 입력도 textarea를 다시 쓰지 않는다', async ({ page }) => {
+    await patchWith(page, '<p>a');
+    await expect(page.locator('#source')).toHaveValue('<p>a');
+    await expect(page.locator('#actual')).toHaveText('a');
+  });
 
-test('파서가 고쳐 주는 입력도 textarea를 다시 쓰지 않는다', async ({ page }) => {
-  await page.goto('/');
-  await patchWith(page, '<p>a');
-  await expect(page.locator('#source')).toHaveValue('<p>a');
-  await expect(page.locator('#actual')).toHaveText('a');
-});
+  test('constructor와 __proto__ 속성을 추가하고 지워도 실제 영역이 미리보기와 같다', async ({ page }) => {
+    await patchWith(page, '<div constructor="1" __proto__="2">x</div>');
+    await expect(page.locator('#error')).toHaveText('');
+    let screen = await readScreen(page);
+    expect(screen.actual).toBe(screen.preview);
 
-test('constructor와 __proto__ 속성을 추가하고 지워도 실제 영역이 미리보기와 같다', async ({ page }) => {
-  await page.goto('/');
-  await patchWith(page, '<div constructor="1" __proto__="2">x</div>');
-  await expect(page.locator('#error')).toHaveText('');
-  let s = await snapshot(page);
-  expect(s.actual).toBe(s.preview);
-  await patchWith(page, '<div>x</div>');
-  await expect(page.locator('#error')).toHaveText('');
-  s = await snapshot(page);
-  expect(s.actual).toBe(s.preview);
-  expect(s.actual).toBe('<div>x</div>');
-});
+    await patchWith(page, '<div>x</div>');
+    await expect(page.locator('#error')).toHaveText('');
+    screen = await readScreen(page);
+    expect(screen.actual).toBe(screen.preview);
+    expect(screen.actual).toBe('<div>x</div>');
+  });
 
-test('뒤로 간 뒤 고치지 않고 Patch해도 앞으로가기가 동작한다', async ({ page }) => {
-  await page.goto('/');
-  await patchWith(page, '<p>one</p>');
-  await page.locator('#back').click();
-  await expect(page.locator('#actual')).toContainText('장보기 목록');
-  await page.locator('#patch').click();
-  await page.locator('#forward').click();
-  await expect(page.locator('#actual')).toHaveText('one');
-});
+  test('뒤로 간 뒤 고치지 않고 Patch해도 앞으로가기가 동작한다', async ({ page }) => {
+    await patchWith(page, '<p>one</p>');
+    await page.locator('#back').click();
+    await expect(page.locator('#actual')).toContainText('장보기 목록');
+    await page.locator('#patch').click();
+    await page.locator('#forward').click();
+    await expect(page.locator('#actual')).toHaveText('one');
+  });
 
-test('줄바꿈과 주석만 다른 입력은 History를 늘리지 않는다', async ({ page }) => {
-  await page.goto('/');
-  await patchWith(page, '<p>one</p>');
-  await patchWith(page, '<!-- c -->\n<p>one</p>\n');
-  await page.locator('#back').click();
-  await expect(page.locator('#actual')).toContainText('장보기 목록');
+  test('줄바꿈과 주석만 다른 입력은 History를 늘리지 않는다', async ({ page }) => {
+    await patchWith(page, '<p>one</p>');
+    await patchWith(page, '<!-- c -->\n<p>one</p>\n');
+    await page.locator('#back').click();
+    await expect(page.locator('#actual')).toContainText('장보기 목록');
+  });
+
+  test('select 안의 div는 Chrome에서 유지되고 고치지 않고 다시 Patch해도 History가 늘지 않는다', async ({ page }) => {
+    // jsdom은 div를 버리고 Chrome은 유지하는 입력이어서 브라우저에서 확인한다.
+    const html = '<select><div>x</div><option>a</option></select>';
+
+    await patchWith(page, html);
+    expect(await readScreen(page)).toEqual(syncedScreen(html));
+    await expect(page.locator('#actual select > div')).toHaveText('x');
+
+    await page.locator('#patch').click();
+    expect(await readScreen(page)).toEqual(syncedScreen(html));
+
+    // 이동하면 textarea에 직렬화한 HTML이 들어가므로, 그 내용으로도 변경이 없어야 한다.
+    await page.locator('#back').click();
+    await page.locator('#forward').click();
+    await page.locator('#patch').click();
+    expect(await readScreen(page)).toEqual(syncedScreen(html));
+
+    await page.locator('#back').click();
+    expect(await readScreen(page)).toEqual(syncedScreen(INITIAL_HTML));
+  });
 });
