@@ -36,8 +36,11 @@ Virtual DOM은 만든 뒤 수정하지 않는 값이므로 복사하지 않고 �
 <dt><a href="#TOTAL_CHOICES">TOTAL_CHOICES</a></dt>
 <dd><p>선택 횟수와 규칙 상수.</p>
 </dd>
+<dt><a href="#PRESENTATION_SECONDS">PRESENTATION_SECONDS</a></dt>
+<dd><p>발표 이벤트 전체의 제한 시간(초).</p>
+</dd>
 <dt><a href="#TARGETS">TARGETS</a></dt>
-<dd><p>발표 타자 이벤트의 함수 이름.</p>
+<dd><p>발표 이벤트 문제. 설명(clue)을 보고 함수 이름(name)을 입력한다.</p>
 </dd>
 <dt><a href="#ENDINGS">ENDINGS</a></dt>
 <dd><p>엔딩 이름과 문구.</p>
@@ -170,7 +173,8 @@ deps가 같으면 <code>compute</code>를 실행하지 않고 저장한 값을 �
 <dd><p>선택 화면. 회식 중이면 참석과 불참을 보여 준다.</p>
 </dd>
 <dt><a href="#PresentationScreen">PresentationScreen(props)</a> ⇒ <code>Object</code></dt>
-<dd><p>발표 타자 화면. 입력창은 글자 영역의 형제이고, 안내는 입력창 뒤에 두어서 입력창 위치가 바뀌지 않는다.</p>
+<dd><p>발표 화면. 설명을 보고 이름을 입력한다. 정답은 보여 주지 않고 글자 칸만 그린다.
+입력창은 글자 칸 영역의 형제이고, 안내는 뒤에 두어서 입력창 위치가 바뀌지 않는다.</p>
 </dd>
 <dt><a href="#EndingScreen">EndingScreen(props)</a> ⇒ <code>Object</code></dt>
 <dd><p>엔딩 화면.</p>
@@ -193,10 +197,13 @@ deps가 같으면 <code>compute</code>를 실행하지 않고 저장한 값을 �
 <dd><p>회식에 답한다. 효과를 적용하고 엔딩과 발표 진입을 다시 확인한다.</p>
 </dd>
 <dt><a href="#finishPresentation">finishPresentation(game)</a> ⇒ <code>Object</code></dt>
-<dd><p>발표 점수(실력 + 완성 수 x 8)를 내고 엔딩으로 보낸다.</p>
+<dd><p>발표 점수(실력 + 맞힌 수 x 8)를 내고 엔딩으로 보낸다.</p>
 </dd>
 <dt><a href="#completeTarget">completeTarget(game)</a> ⇒ <code>Object</code></dt>
-<dd><p>함수 이름 하나를 완성한 것으로 센다. 모두 완성하면 발표를 끝낸다.</p>
+<dd><p>함수 이름 하나를 맞힌 것으로 센다. 마지막 문제이면 발표를 끝낸다.</p>
+</dd>
+<dt><a href="#skipTarget">skipTarget(game)</a> ⇒ <code>Object</code></dt>
+<dd><p>문제를 넘긴다. 맞힌 수는 올리지 않고, 마지막 문제이면 발표를 끝낸다.</p>
 </dd>
 <dt><a href="#timeoutTurn">timeoutTurn(game, turn, random)</a> ⇒ <code>Object</code></dt>
 <dd><p>시간 초과를 처리한다. 예약할 때의 턴 번호가 지금과 다르면 아무것도 하지 않는다.
@@ -409,10 +416,16 @@ History와 번호를 맞춘 Patch 설명 목록이다. 첫 항목은 초기 상�
 선택 횟수와 규칙 상수.
 
 **Kind**: global constant  
+<a name="PRESENTATION_SECONDS"></a>
+
+## PRESENTATION\_SECONDS
+발표 이벤트 전체의 제한 시간(초).
+
+**Kind**: global constant  
 <a name="TARGETS"></a>
 
 ## TARGETS
-발표 타자 이벤트의 함수 이름.
+발표 이벤트 문제. 설명(clue)을 보고 함수 이름(name)을 입력한다.
 
 **Kind**: global constant  
 <a name="ENDINGS"></a>
@@ -814,7 +827,7 @@ HTML 문자열을 루트 Virtual DOM으로 바꾼다.
 <a name="PresentationScreen"></a>
 
 ## PresentationScreen(props) ⇒ <code>Object</code>
-발표 타자 화면. 입력창은 글자 영역의 형제이고, 안내는 입력창 뒤에 두어서 입력창 위치가 바뀌지 않는다.
+발표 화면. 설명을 보고 이름을 입력한다. 정답은 보여 주지 않고 글자 칸만 그린다.입력창은 글자 칸 영역의 형제이고, 안내는 뒤에 두어서 입력창 위치가 바뀌지 않는다.
 
 **Kind**: global function  
 **Returns**: <code>Object</code> - Virtual DOM  
@@ -838,7 +851,8 @@ HTML 문자열을 루트 Virtual DOM으로 바꾼다.
 <a name="Game"></a>
 
 ## Game() ⇒ <code>Object</code>
-정글 생존기의 루트 컴포넌트. Hook을 쓰는 유일한 컴포넌트이고, 자식은 Props만 받는다.난수는 핸들러와 시간 초과 처리에서만 `Math.random`으로 만든다.
+정글 생존기의 루트 컴포넌트. Hook을 쓰는 유일한 컴포넌트이고, 자식은 Props만 받는다.
+난수는 핸들러와 시간 초과 처리에서만 `Math.random`으로 만든다.
 
 **Kind**: global function  
 **Returns**: <code>Object</code> - Virtual DOM  
@@ -891,7 +905,7 @@ HTML 문자열을 루트 Virtual DOM으로 바꾼다.
 <a name="finishPresentation"></a>
 
 ## finishPresentation(game) ⇒ <code>Object</code>
-발표 점수(실력 + 완성 수 x 8)를 내고 엔딩으로 보낸다.
+발표 점수(실력 + 맞힌 수 x 8)를 내고 엔딩으로 보낸다.
 
 **Kind**: global function  
 **Returns**: <code>Object</code> - phase가 'ending'인 새 게임  
@@ -903,9 +917,22 @@ HTML 문자열을 루트 Virtual DOM으로 바꾼다.
 <a name="completeTarget"></a>
 
 ## completeTarget(game) ⇒ <code>Object</code>
-함수 이름 하나를 완성한 것으로 센다. 모두 완성하면 발표를 끝낸다.
+함수 이름 하나를 맞힌 것으로 센다. 마지막 문제이면 발표를 끝낸다.
 
 **Kind**: global function  
+**Returns**: <code>Object</code> - 새 게임. presentation이 아니면 입력 그대로이다.  
+
+| Param | Type |
+| --- | --- |
+| game | <code>Object</code> | 
+
+<a name="skipTarget"></a>
+
+## skipTarget(game) ⇒ <code>Object</code>
+문제를 넘긴다. 맞힌 수는 올리지 않고, 마지막 문제이면 발표를 끝낸다.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - 새 게임. presentation이 아니면 입력 그대로이다.  
 
 | Param | Type |
 | --- | --- |

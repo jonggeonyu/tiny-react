@@ -1,8 +1,8 @@
 import { h } from '../core/h.js';
 import { useState, useEffect, useMemo } from '../core/hooks.js';
-import { TARGETS } from './gameData.js';
+import { TARGETS, PRESENTATION_SECONDS } from './gameData.js';
 import {
-  createGame, startGame, playTurn, answerDinner, completeTarget, timeoutTurn, judgeTyping, getTitle,
+  createGame, startGame, playTurn, answerDinner, completeTarget, skipTarget, timeoutTurn, judgeTyping, getTitle,
 } from './gameLogic.js';
 import { StartScreen, PlayScreen, PresentationScreen, EndingScreen } from './components.js';
 
@@ -66,7 +66,7 @@ export function Game() {
   // 1초 타이머. 발표 중에는 함수 이름이 바뀌어도 deps가 같아 다시 시작하지 않는다.
   useEffect(() => {
     if (!timed) return undefined;
-    setTimeLeft(TIME_LIMIT);
+    setTimeLeft(game.phase === 'presentation' ? PRESENTATION_SECONDS : TIME_LIMIT);
     const id = setInterval(() => setTimeLeft((t) => Math.max(0, t - 1)), 1000);
     return () => clearInterval(id);
   }, [game.phase, game.turn, game.event]);
@@ -78,12 +78,12 @@ export function Game() {
     setGame((current) => timeoutTurn(current, turn, random));
   }, [timeLeft]);
 
-  // 발표가 시작되면 입력창에 포커스
+  // 발표가 시작되거나 문제가 바뀌면 입력창에 포커스. 타이머 deps와 별개라 타이머는 다시 시작하지 않는다.
   useEffect(() => {
     if (game.phase !== 'presentation') return;
     const input = document.querySelector('.typing-input');
     if (input) input.focus();
-  }, [game.phase]);
+  }, [game.phase, game.targetIndex]);
 
   // 기록이 늘면 최신 줄이 보이도록 기록 영역을 맨 아래로 스크롤한다.
   useEffect(() => {
@@ -92,7 +92,7 @@ export function Game() {
   }, [game.log.length]);
 
   const title = useMemo(() => getTitle(game.stats), [game.stats]);
-  const target = TARGETS[Math.min(game.targetIndex, TARGETS.length - 1)];
+  const { name: target, clue } = TARGETS[Math.min(game.targetIndex, TARGETS.length - 1)];
   const letters = useMemo(() => judgeTyping(target, typed), [target, typed]);
 
   // 턴이 지나가는 핸들러는 남은 시간도 함께 되돌려서 시간 초과와 겹쳐도 한 번만 처리되게 한다.
@@ -114,6 +114,13 @@ export function Game() {
       setTyped(value);
     }
   };
+  const skip = () => {
+    setGame((current) => skipTarget(current));
+    setTyped('');
+    // typed가 이미 ''이면 diff가 없어 입력창이 남으므로 직접 비운다.
+    const input = document.querySelector('.typing-input');
+    if (input) input.value = '';
+  };
   const start = () => {
     if (name.trim() === '') return;
     setGame((current) => startGame(current));
@@ -132,8 +139,8 @@ export function Game() {
     screen = h(PlayScreen, { game, title, timeLeft, onChoose: choose, onDinner: answer });
   } else if (game.phase === 'presentation') {
     screen = h(PresentationScreen, {
-      letters, typed, timeLeft, done: game.targetIndex, total: TARGETS.length,
-      showHint: /[^\x00-\x7f]/.test(typed), onType: type,
+      letters, clue, typed, timeLeft, index: game.targetIndex, total: TARGETS.length,
+      showHint: /[^\x00-\x7f]/.test(typed), onType: type, onSkip: skip,
     });
   } else {
     screen = h(EndingScreen, { game, name: name.trim(), bestScore, onRestart: restart });

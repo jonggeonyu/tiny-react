@@ -55,7 +55,7 @@ function advance(game) {
 export function createGame() {
   return {
     phase: 'start', turn: 0, stats: { ...INITIAL_STATS }, log: [], event: null,
-    hasDinner: false, goHomeCount: 0, targetIndex: 0, ending: null, score: null,
+    hasDinner: false, goHomeCount: 0, targetIndex: 0, correctCount: 0, ending: null, score: null,
   };
 }
 
@@ -115,23 +115,34 @@ export function answerDinner(game, attends) {
 }
 
 /**
- * 발표 점수(실력 + 완성 수 x 8)를 내고 엔딩으로 보낸다.
+ * 발표 점수(실력 + 맞힌 수 x 8)를 내고 엔딩으로 보낸다.
  * @param {Object} game
  * @returns {Object} phase가 'ending'인 새 게임
  */
 export function finishPresentation(game) {
   if (game.phase !== 'presentation') return game;
-  const score = game.stats.skill + game.targetIndex * SCORE_PER_TARGET;
+  const score = game.stats.skill + game.correctCount * SCORE_PER_TARGET;
   const ending = score >= PASS_SCORE ? 'success' : 'fail';
   return { ...game, phase: 'ending', ending, score, log: [...game.log, ENDINGS[ending].text] };
 }
 
 /**
- * 함수 이름 하나를 완성한 것으로 센다. 모두 완성하면 발표를 끝낸다.
+ * 함수 이름 하나를 맞힌 것으로 센다. 마지막 문제이면 발표를 끝낸다.
  * @param {Object} game
- * @returns {Object}
+ * @returns {Object} 새 게임. presentation이 아니면 입력 그대로이다.
  */
 export function completeTarget(game) {
+  if (game.phase !== 'presentation') return game;
+  const next = { ...game, targetIndex: game.targetIndex + 1, correctCount: game.correctCount + 1 };
+  return next.targetIndex >= TARGETS.length ? finishPresentation(next) : next;
+}
+
+/**
+ * 문제를 넘긴다. 맞힌 수는 올리지 않고, 마지막 문제이면 발표를 끝낸다.
+ * @param {Object} game
+ * @returns {Object} 새 게임. presentation이 아니면 입력 그대로이다.
+ */
+export function skipTarget(game) {
   if (game.phase !== 'presentation') return game;
   const next = { ...game, targetIndex: game.targetIndex + 1 };
   return next.targetIndex >= TARGETS.length ? finishPresentation(next) : next;

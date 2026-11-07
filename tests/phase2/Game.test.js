@@ -130,8 +130,21 @@ async function reachPresentation() {
   for (let i = 0; i < 7; i += 1) await press('담배 타임');
 }
 
+const clueText = () => container.querySelector('.clue').textContent;
+const lettersText = () => container.querySelector('.target-name').textContent;
+
 describe('발표', () => {
-  it('입력창이 교체되지 않고 포커스가 유지되며 함수 이름을 완성하면 비워진다', async () => {
+  it('발표가 시작되면 남은 시간이 40초이고 설명이 보이며 정답 글자는 보이지 않는다', async () => {
+    mountGame();
+    await reachPresentation();
+    expect(timerText()).toContain('40');
+    expect(clueText()).toContain('값을 기억하고');
+    expect(container.querySelectorAll('.target-name span')).toHaveLength(8);
+    expect(lettersText()).toBe('________');
+    expect(container.textContent).not.toContain('useState');
+  });
+
+  it('입력창이 교체되지 않고 포커스가 유지되며 맞은 글자는 그 글자, 틀린 글자는 ×이다', async () => {
     mountGame();
     await reachPresentation();
     const input = container.querySelector('.typing-input');
@@ -140,16 +153,20 @@ describe('발표', () => {
     expect(container.querySelector('.typing-input')).toBe(input);
     expect(document.activeElement).toBe(input);
     expect(container.querySelectorAll('.char-correct')).toHaveLength(3);
+    expect(lettersText()).toBe('use_____');
     await typeInto('.typing-input', 'usx');
     expect(container.querySelectorAll('.char-wrong')).toHaveLength(1);
+    expect(lettersText()).toBe('us×_____');
+    expect(container.textContent).not.toContain('useState');
     await typeInto('.typing-input', 'useState');
     expect(container.querySelector('.typing-input')).toBe(input);
     expect(input.value).toBe('');
-    expect(container.querySelector('.target-name').textContent).toBe('useEffect');
+    expect(clueText()).toContain('바깥일');
+    expect(lettersText()).toBe('_________');
     expect(document.activeElement).toBe(input);
-    // 이름이 바뀌어도 타이머를 다시 시작하지 않고 하나만 돈다. (jsdom의 focus가 타이머를 하나 더 만들어서 개수 대신 시간으로 확인한다.)
+    // 문제가 바뀌어도 타이머를 다시 시작하지 않는다. (jsdom의 focus가 타이머를 하나 더 만들어서 개수 대신 시간으로 확인한다.)
     await tick(3000);
-    expect(timerText()).toContain('17');
+    expect(timerText()).toContain('37');
   });
 
   it('함수 이름 전체를 한 번에 붙여넣어도 입력창이 비워진다', async () => {
@@ -157,18 +174,53 @@ describe('발표', () => {
     await reachPresentation();
     await typeInto('.typing-input', 'useState');
     expect(container.querySelector('.typing-input').value).toBe('');
-    expect(container.querySelector('.target-name').textContent).toBe('useEffect');
+    expect(clueText()).toContain('바깥일');
   });
 
-  it('발표의 20초는 다섯 이름 전체의 시간이라 입력과 완성으로 되돌아가지 않는다', async () => {
+  it('넘기기는 입력을 비우고 다음 설명을 보여 주며 남은 시간과 포커스를 유지한다', async () => {
     mountGame();
     await reachPresentation();
-    await tick(19000);
+    const input = container.querySelector('.typing-input');
+    await tick(5000);
+    await typeInto('.typing-input', 'usx');
+    await press('넘기기');
+    expect(container.querySelector('.typing-input')).toBe(input);
+    expect(input.value).toBe('');
+    expect(clueText()).toContain('바깥일');
+    expect(lettersText()).toBe('_________');
+    expect(document.activeElement).toBe(input);
+    expect(timerText()).toContain('35');
+    await tick(2000);
+    expect(timerText()).toContain('33');
+  });
+
+  it('입력이 비어 있을 때 넘겨도 입력창이 비어 있고 다음 설명이 나온다', async () => {
+    mountGame();
+    await reachPresentation();
+    await press('넘기기');
+    await press('넘기기');
+    expect(clueText()).toContain('deps가 같으면');
+    expect(container.querySelector('.typing-input').value).toBe('');
+  });
+
+  it('다섯 문제를 모두 넘기면 맞힌 수 없이 점수를 낸다', async () => {
+    mountGame();
+    await reachPresentation();
+    for (let i = 0; i < 5; i += 1) await press('넘기기');
+    expect(container.querySelector('.ending-screen')).not.toBeNull();
+    expect(container.querySelector('h2').textContent).toBe('발표 폭망');
+    expect(container.querySelector('.score').textContent).toContain('65');
+  });
+
+  it('발표의 40초는 다섯 문제 전체의 시간이라 입력과 맞힘으로 되돌아가지 않는다', async () => {
+    mountGame();
+    await reachPresentation();
+    await tick(39000);
     expect(timerText()).toContain('1초');
     await typeInto('.typing-input', 'u');
     expect(timerText()).toContain('1초');
     await typeInto('.typing-input', 'useState');
-    expect(container.querySelector('.target-name').textContent).toBe('useEffect');
+    expect(clueText()).toContain('바깥일');
     expect(timerText()).toContain('1초');
   });
 
@@ -190,7 +242,7 @@ describe('엔딩과 최고 기록', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('막힘'); });
     mountGame();
     await reachPresentation();
-    await tick(20000);
+    await tick(40000);
     expect(container.querySelector('.ending-screen')).not.toBeNull();
     expect(container.querySelector('.score').textContent).toContain('65');
   });

@@ -25,11 +25,19 @@ export const DINNER_OPEN_TEXT = '밤에 회식 공지가 떴다. 갈까?';
 /** 선택 횟수와 규칙 상수. */
 export const TOTAL_CHOICES = 14;
 export const GO_HOME_LIMIT = 5;
-export const PASS_SCORE = 70;
+export const PASS_SCORE = 90;
 export const SCORE_PER_TARGET = 8;
+/** 발표 이벤트 전체의 제한 시간(초). */
+export const PRESENTATION_SECONDS = 40;
 
-/** 발표 타자 이벤트의 함수 이름. */
-export const TARGETS = ['useState', 'useEffect', 'useMemo', 'diff', 'patch'];
+/** 발표 이벤트 문제. 설명(clue)을 보고 함수 이름(name)을 입력한다. */
+export const TARGETS = [
+  { name: 'useState', clue: '값을 기억하고, 값이 바뀌면 화면을 다시 그리게 하는 Hook' },
+  { name: 'useEffect', clue: '화면이 그려진 뒤에 타이머 같은 바깥일을 처리하는 Hook' },
+  { name: 'useMemo', clue: '계산 결과를 저장해 두고, deps가 같으면 재사용하는 Hook' },
+  { name: 'diff', clue: '이전과 새 Virtual DOM을 비교해 변경 목록을 만드는 함수' },
+  { name: 'patch', clue: '변경 목록을 실제 DOM에 반영하는 함수' },
+];
 
 /** 엔딩 이름과 문구. */
 export const ENDINGS = {

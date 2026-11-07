@@ -56,11 +56,16 @@ async function reachPresentation(page) {
   await choose(page, ...Array(7).fill('담배 타임'));
 }
 
-test('난수를 고정해 한 판을 끝까지 하면 발표 대성공이고 최고 기록이 남는다', async ({ page }) => {
+test('설명을 보고 답을 입력하면 발표 대성공이고 최고 기록이 남는다', async ({ page }) => {
   await open(page);
   await reachPresentation(page);
-  for (const name of ['useState', 'useEffect', 'useMemo', 'diff', 'patch']) {
-    await expect(page.locator('.target-name')).toHaveText(name);
+  const answers = [
+    ['값을 기억하고', 'useState'], ['바깥일', 'useEffect'], ['deps가 같으면', 'useMemo'],
+    ['변경 목록을 만드는', 'diff'], ['실제 DOM에 반영', 'patch'],
+  ];
+  for (const [clue, name] of answers) {
+    await expect(page.locator('.clue')).toContainText(clue);
+    await expect(page.locator('.presentation-screen')).not.toContainText(name);
     await page.locator('.typing-input').pressSequentially(name);
   }
   await expect(page.getByRole('heading', { name: '발표 대성공' })).toBeVisible();
@@ -70,14 +75,34 @@ test('난수를 고정해 한 판을 끝까지 하면 발표 대성공이고 최
   await expect(page.locator('.best-score')).toContainText('105');
 });
 
-test('발표에서 한글을 치면 안내가 나오고 시간이 지나면 발표 폭망이다', async ({ page }) => {
+test('틀린 글자는 ×로 보이고 넘기기는 입력을 비우고 다음 설명을 보여 준다', async ({ page }) => {
+  await open(page);
+  await reachPresentation(page);
+  await expect(page.locator('.timer')).toContainText('40');
+  await page.locator('.typing-input').pressSequentially('usx');
+  await expect(page.locator('.target-name')).toHaveText('us×_____');
+  await page.getByRole('button', { name: '넘기기' }).click();
+  await expect(page.locator('.typing-input')).toHaveValue('');
+  await expect(page.locator('.typing-input')).toBeFocused();
+  await expect(page.locator('.clue')).toContainText('바깥일');
+  await page.locator('.typing-input').pressSequentially('useEffect');
+  await expect(page.locator('.clue')).toContainText('deps가 같으면');
+  for (let i = 0; i < 3; i += 1) await page.getByRole('button', { name: '넘기기' }).click();
+  // 맞힌 문제 1개: 65 + 8 = 73 < 90
+  await expect(page.getByRole('heading', { name: '발표 폭망' })).toBeVisible();
+  await expect(page.locator('.score')).toContainText('73');
+});
+
+test('발표에서 한글을 치면 안내가 나오고 40초가 지나면 발표 폭망이다', async ({ page }) => {
   await page.clock.install();
   await open(page);
   await reachPresentation(page);
   await expect(page.locator('.typing-input')).toBeFocused();
   await page.locator('.typing-input').fill('ㅕㄴㄷ');
   await expect(page.locator('.typing-hint')).toContainText('한/영');
-  await page.clock.runFor(20000);
+  await page.clock.runFor(39000);
+  await expect(page.getByRole('heading', { name: '발표 폭망' })).toHaveCount(0);
+  await page.clock.runFor(1000);
   await expect(page.getByRole('heading', { name: '발표 폭망' })).toBeVisible();
 });
 

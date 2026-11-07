@@ -142,16 +142,32 @@ button:focus-visible, input:focus-visible, summary:focus-visible {
   color: var(--color-on-view-2);
 }
 
-/* 발표 타자 */
+/* 발표 */
+.clue {
+  margin: 0;
+  font-size: 18px;
+  line-height: 28px;
+  color: var(--color-on-view-1);
+}
 .target-name {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
   font-family: var(--font-mono);
-  font-size: 32px;
+  font-size: 28px;
   line-height: 40px;
   font-weight: 700;
-  letter-spacing: 1px;
 }
-.char-correct { color: var(--color-primary); }
-.char-wrong { color: var(--color-on-view-error); background: var(--color-error-container); }
+.target-name span {
+  min-width: 32px;
+  text-align: center;
+  border-bottom: 2px solid var(--color-outline-2);
+  color: var(--color-on-view-2);
+}
+.target-name .char-correct { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+.target-name .char-wrong { color: var(--color-on-view-2); border-bottom-color: var(--color-on-view-2); }
+.skip { align-self: flex-start; }
 
 /* 관찰 패널 */
 #inspector summary { cursor: pointer; font-weight: 700; }

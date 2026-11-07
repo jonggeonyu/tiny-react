@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createGame, startGame, playTurn, timeoutTurn, answerDinner,
-  completeTarget, finishPresentation, judgeTyping, getTitle,
+  completeTarget, skipTarget, finishPresentation, judgeTyping, getTitle,
 } from '../../src/phase2/gameLogic.js';
 
 const NEVER = () => 0.99; // 순찰, 회식 모두 없음
@@ -15,7 +15,7 @@ describe('createGame, startGame', () => {
   it('처음 상태를 만든다', () => {
     expect(createGame()).toEqual({
       phase: 'start', turn: 0, stats: { stamina: 70, skill: 20, mental: 60, suspicion: 0 },
-      log: [], event: null, hasDinner: false, goHomeCount: 0, targetIndex: 0, ending: null, score: null,
+      log: [], event: null, hasDinner: false, goHomeCount: 0, targetIndex: 0, correctCount: 0, ending: null, score: null,
     });
   });
   it('startGame은 phase만 play로 바꾼다', () => {
@@ -160,27 +160,50 @@ describe('엔딩', () => {
 });
 
 describe('발표', () => {
-  const pres = (skill, targetIndex) => ({ ...play({ turn: 14, stats: { skill } }), phase: 'presentation', targetIndex });
-  it('completeTarget은 하나씩 올린다', () => {
-    expect(completeTarget(pres(10, 0)).targetIndex).toBe(1);
-    expect(completeTarget(pres(10, 0)).phase).toBe('presentation');
+  const pres = (skill, correctCount, targetIndex = correctCount) => ({
+    ...play({ turn: 14, stats: { skill } }), phase: 'presentation', targetIndex, correctCount,
   });
-  it('모두 완성하면 점수를 낸다', () => {
-    const r = completeTarget(pres(30, 4));
+  it('completeTarget은 맞힌 수와 문제 번호를 하나씩 올린다', () => {
+    const r = completeTarget(pres(10, 0));
+    expect(r.targetIndex).toBe(1);
+    expect(r.correctCount).toBe(1);
+    expect(r.phase).toBe('presentation');
+  });
+  it('모두 끝나면 점수를 낸다', () => {
+    const r = completeTarget(pres(50, 4));
     expect(r.phase).toBe('ending');
-    expect(r.score).toBe(70);
+    expect(r.score).toBe(90);
     expect(r.ending).toBe('success');
   });
-  it('69와 70의 경계', () => {
-    const a = finishPresentation(pres(29, 5));
-    expect(a.score).toBe(69);
+  it('skipTarget은 맞힌 수를 올리지 않고 문제 번호만 올린다', () => {
+    const r = skipTarget(pres(10, 1, 1));
+    expect(r.targetIndex).toBe(2);
+    expect(r.correctCount).toBe(1);
+    expect(r.phase).toBe('presentation');
+  });
+  it('마지막 문제를 넘기면 발표가 끝나고 점수는 맞힌 수로 낸다', () => {
+    const r = skipTarget(pres(20, 2, 4));
+    expect(r.phase).toBe('ending');
+    expect(r.score).toBe(36);
+  });
+  it('presentation이 아니면 skipTarget과 completeTarget은 입력을 그대로 돌려준다', () => {
+    const g = play({ turn: 3 });
+    expect(skipTarget(g)).toBe(g);
+    expect(completeTarget(g)).toBe(g);
+    const ended = finishPresentation(pres(20, 2));
+    expect(skipTarget(ended)).toBe(ended);
+  });
+  it('89와 90의 경계', () => {
+    const a = finishPresentation(pres(49, 5));
+    expect(a.score).toBe(89);
     expect(a.ending).toBe('fail');
-    const b = finishPresentation(pres(30, 5));
-    expect(b.score).toBe(70);
+    const b = finishPresentation(pres(50, 5));
+    expect(b.score).toBe(90);
     expect(b.ending).toBe('success');
   });
-  it('점수는 실력 + 완성 수 x 8', () => {
-    expect(finishPresentation(pres(20, 2)).score).toBe(36);
+  it('점수는 실력 + 맞힌 수 x 8이고 문제 번호와 무관하다', () => {
+    expect(finishPresentation(pres(20, 2, 4)).score).toBe(36);
+    expect(finishPresentation(pres(20, 0, 3)).score).toBe(20);
   });
   it('presentation이 아니면 finishPresentation은 입력을 그대로 돌려준다', () => {
     const g = play({ turn: 3 });
@@ -191,6 +214,7 @@ describe('발표', () => {
   it('입력을 바꾸지 않는다', () => {
     const g = pres(20, 2);
     finishPresentation(g);
+    skipTarget(g);
     expect(g.phase).toBe('presentation');
     expect(g.score).toBeNull();
   });
@@ -213,7 +237,7 @@ describe('timeoutTurn', () => {
     expect(r.stats.skill).toBe(d.stats.skill + 5);
   });
   it('발표 중이면 끝낸다', () => {
-    const g = { ...play({ turn: 14 }), phase: 'presentation', targetIndex: 1 };
+    const g = { ...play({ turn: 14 }), phase: 'presentation', targetIndex: 2, correctCount: 1 };
     const r = timeoutTurn(g, 14, NEVER);
     expect(r.phase).toBe('ending');
     expect(r.score).toBe(28);

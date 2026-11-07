@@ -82,21 +82,27 @@ export function PlayScreen({ game, title, timeLeft, onChoose, onDinner }) {
   );
 }
 
+const LETTER_MARK = { pending: '_', wrong: '×' };
+
 /**
- * 발표 타자 화면. 입력창은 글자 영역의 형제이고, 안내는 입력창 뒤에 두어서 입력창 위치가 바뀌지 않는다.
- * @param {{letters: Array<{char: string, status: string}>, typed: string, timeLeft: number, done: number, total: number, showHint: boolean, onType: function(string, Element): void}} props
+ * 발표 화면. 설명을 보고 이름을 입력한다. 정답은 보여 주지 않고 글자 칸만 그린다.
+ * 입력창은 글자 칸 영역의 형제이고, 안내는 뒤에 두어서 입력창 위치가 바뀌지 않는다.
+ * @param {{letters: Array<{char: string, status: string}>, clue: string, typed: string, timeLeft: number, index: number, total: number, showHint: boolean, onType: function(string, Element): void, onSkip: function(): void}} props
  * @returns {Object} Virtual DOM
  */
-export function PresentationScreen({ letters, typed, timeLeft, done, total, showHint, onType }) {
+export function PresentationScreen({ letters, clue, typed, timeLeft, index, total, showHint, onType, onSkip }) {
   return h('div', { class: 'presentation-screen' },
-    h('h2', null, `발표 ${done} / ${total}`),
+    h('h2', null, `발표 ${index + 1} / ${total}`),
     h('div', { class: 'timer' }, `남은 시간 ${timeLeft}초`),
+    h('p', { class: 'clue' }, clue),
     h('p', { class: 'target-name' },
-      ...letters.map(({ char, status }) => h('span', { class: `char-${status}` }, char))),
+      ...letters.map(({ char, status }) =>
+        h('span', { class: `char-${status}` }, LETTER_MARK[status] || char))),
     h('input', {
       class: 'typing-input', type: 'text', value: typed, 'aria-label': '함수 이름 입력',
       autocomplete: 'off', spellcheck: 'false', onInput: (event) => onType(event.target.value, event.target),
     }),
+    h('button', { class: 'skip', onClick: onSkip }, '넘기기'),
     showHint ? h('p', { class: 'typing-hint' }, '한/영 키를 눌러 영어로 입력하세요.') : null,
   );
 }
