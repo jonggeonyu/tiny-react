@@ -18,6 +18,36 @@ Virtual DOM은 만든 뒤 수정하지 않는 값이므로 복사하지 않고 �
 <dt><a href="#logEntries">logEntries</a></dt>
 <dd><p>History와 번호를 맞춘 Patch 설명 목록이다. 첫 항목은 초기 상태이다.</p>
 </dd>
+<dt><a href="#INITIAL_STATS">INITIAL_STATS</a></dt>
+<dd><p>시작 스탯.</p>
+</dd>
+<dt><a href="#CHOICES">CHOICES</a></dt>
+<dd><p>선택지 표. 효과는 체력, 실력, 멘탈, 의심도 순서의 변화량이다.</p>
+</dd>
+<dt><a href="#PATROL_THRESHOLD">PATROL_THRESHOLD</a></dt>
+<dd><p>코치 순찰이 시작되는 의심도.</p>
+</dd>
+<dt><a href="#PATROL_EFFECT">PATROL_EFFECT</a></dt>
+<dd><p>순찰에 걸렸을 때의 변화량.</p>
+</dd>
+<dt><a href="#DINNER_CHANCE">DINNER_CHANCE</a></dt>
+<dd><p>회식이 열릴 확률.</p>
+</dd>
+<dt><a href="#TOTAL_CHOICES">TOTAL_CHOICES</a></dt>
+<dd><p>선택 횟수와 규칙 상수.</p>
+</dd>
+<dt><a href="#TARGETS">TARGETS</a></dt>
+<dd><p>발표 타자 이벤트의 함수 이름.</p>
+</dd>
+<dt><a href="#ENDINGS">ENDINGS</a></dt>
+<dd><p>엔딩 이름과 문구.</p>
+</dd>
+<dt><a href="#TITLES">TITLES</a></dt>
+<dd><p>칭호 목록. 앞의 조건이 먼저이다.</p>
+</dd>
+<dt><a href="#PERIODS">PERIODS</a></dt>
+<dd><p>시간대 이름. <code>turn % 3</code>으로 고른다.</p>
+</dd>
 </dl>
 
 ## Functions
@@ -126,6 +156,44 @@ deps가 같으면 <code>compute</code>를 실행하지 않고 저장한 값을 �
 텍스트가 섞인 요소는 안쪽까지 <code>vdomToHtml</code> 결과 그대로 한 줄에 두고, 자식이 없는 요소와 <code>pre</code>, <code>listing</code>도 한 줄이다.
 루트도 같은 규칙이므로 루트에 텍스트가 섞이면 결과는 <code>vdomToHtml(root)</code>와 같다.
 이스케이프와 직렬화는 <code>vdomToHtml</code>을 그대로 쓰며, 왕복의 범위도 <code>vdomToHtml</code>과 같다.</p>
+</dd>
+<dt><a href="#applyEffect">applyEffect(stats, effect)</a> ⇒ <code>Object</code></dt>
+<dd><p>스탯에 변화량을 더하고 0~100으로 제한한 새 객체를 돌려준다.</p>
+</dd>
+<dt><a href="#checkEnding">checkEnding(game)</a> ⇒ <code>Object</code></dt>
+<dd><p>사건 판정 뒤의 엔딩을 확인한다. 앞의 조건이 먼저이다.</p>
+</dd>
+<dt><a href="#advance">advance(game)</a> ⇒ <code>Object</code></dt>
+<dd><p>엔딩이 아니면 다음 단계(발표)로 넘긴다.</p>
+</dd>
+<dt><a href="#createGame">createGame()</a> ⇒ <code>Object</code></dt>
+<dd><p>처음 상태의 게임을 만든다. <code>다시 하기</code>에도 쓴다.</p>
+</dd>
+<dt><a href="#startGame">startGame(game)</a> ⇒ <code>Object</code></dt>
+<dd><p>게임을 시작한다.</p>
+</dd>
+<dt><a href="#playTurn">playTurn(game, choiceId, random)</a> ⇒ <code>Object</code></dt>
+<dd><p>선택 하나를 적용하고 순찰, 회식, 엔딩 순서로 판정한다.
+<code>random</code>은 0 이상 1 미만의 수를 돌려주는 함수이다.</p>
+</dd>
+<dt><a href="#answerDinner">answerDinner(game, attends)</a> ⇒ <code>Object</code></dt>
+<dd><p>회식에 답한다. 효과를 적용하고 엔딩과 발표 진입을 다시 확인한다.</p>
+</dd>
+<dt><a href="#finishPresentation">finishPresentation(game)</a> ⇒ <code>Object</code></dt>
+<dd><p>발표 점수(실력 + 완성 수 x 8)를 내고 엔딩으로 보낸다.</p>
+</dd>
+<dt><a href="#completeTarget">completeTarget(game)</a> ⇒ <code>Object</code></dt>
+<dd><p>함수 이름 하나를 완성한 것으로 센다. 모두 완성하면 발표를 끝낸다.</p>
+</dd>
+<dt><a href="#timeoutTurn">timeoutTurn(game, turn, random)</a> ⇒ <code>Object</code></dt>
+<dd><p>시간 초과를 처리한다. 예약할 때의 턴 번호가 지금과 다르면 아무것도 하지 않는다.
+회식 중이면 불참, 발표 중이면 발표 종료, 선택 중이면 멍때리기이다.</p>
+</dd>
+<dt><a href="#judgeTyping">judgeTyping(target, typed)</a> ⇒ <code>Array.&lt;{char: string, status: (&#x27;correct&#x27;|&#x27;wrong&#x27;|&#x27;pending&#x27;)}&gt;</code></dt>
+<dd><p>입력을 함수 이름과 위치별로 비교한다. 대소문자를 구분하고, 입력이 더 길어도 target 길이까지만 낸다.</p>
+</dd>
+<dt><a href="#getTitle">getTitle(stats)</a> ⇒ <code>string</code></dt>
+<dd><p>스탯으로 칭호를 고른다. 앞의 조건이 먼저이다.</p>
 </dd>
 </dl>
 
@@ -279,6 +347,66 @@ Virtual DOM을 저장하고 현재 위치로 삼는다.
 
 ## logEntries
 History와 번호를 맞춘 Patch 설명 목록이다. 첫 항목은 초기 상태이다.
+
+**Kind**: global constant  
+<a name="INITIAL_STATS"></a>
+
+## INITIAL\_STATS
+시작 스탯.
+
+**Kind**: global constant  
+<a name="CHOICES"></a>
+
+## CHOICES
+선택지 표. 효과는 체력, 실력, 멘탈, 의심도 순서의 변화량이다.
+
+**Kind**: global constant  
+<a name="PATROL_THRESHOLD"></a>
+
+## PATROL\_THRESHOLD
+코치 순찰이 시작되는 의심도.
+
+**Kind**: global constant  
+<a name="PATROL_EFFECT"></a>
+
+## PATROL\_EFFECT
+순찰에 걸렸을 때의 변화량.
+
+**Kind**: global constant  
+<a name="DINNER_CHANCE"></a>
+
+## DINNER\_CHANCE
+회식이 열릴 확률.
+
+**Kind**: global constant  
+<a name="TOTAL_CHOICES"></a>
+
+## TOTAL\_CHOICES
+선택 횟수와 규칙 상수.
+
+**Kind**: global constant  
+<a name="TARGETS"></a>
+
+## TARGETS
+발표 타자 이벤트의 함수 이름.
+
+**Kind**: global constant  
+<a name="ENDINGS"></a>
+
+## ENDINGS
+엔딩 이름과 문구.
+
+**Kind**: global constant  
+<a name="TITLES"></a>
+
+## TITLES
+칭호 목록. 앞의 조건이 먼저이다.
+
+**Kind**: global constant  
+<a name="PERIODS"></a>
+
+## PERIODS
+시간대 이름. `turn % 3`으로 고른다.
 
 **Kind**: global constant  
 <a name="setProp"></a>
@@ -616,6 +744,146 @@ HTML 문자열을 루트 Virtual DOM으로 바꾼다.
 | Param | Type | Description |
 | --- | --- | --- |
 | root | [<code>VElement</code>](#VElement) | `type`이 `'root'`인 루트 노드 |
+
+<a name="applyEffect"></a>
+
+## applyEffect(stats, effect) ⇒ <code>Object</code>
+스탯에 변화량을 더하고 0~100으로 제한한 새 객체를 돌려준다.
+
+**Kind**: global function  
+
+| Param | Type |
+| --- | --- |
+| stats | <code>Object</code> | 
+| effect | <code>Object</code> | 
+
+<a name="checkEnding"></a>
+
+## checkEnding(game) ⇒ <code>Object</code>
+사건 판정 뒤의 엔딩을 확인한다. 앞의 조건이 먼저이다.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - 엔딩이면 phase가 'ending'인 새 게임, 아니면 입력 그대로  
+
+| Param | Type |
+| --- | --- |
+| game | <code>Object</code> | 
+
+<a name="advance"></a>
+
+## advance(game) ⇒ <code>Object</code>
+엔딩이 아니면 다음 단계(발표)로 넘긴다.
+
+**Kind**: global function  
+
+| Param | Type |
+| --- | --- |
+| game | <code>Object</code> | 
+
+<a name="createGame"></a>
+
+## createGame() ⇒ <code>Object</code>
+처음 상태의 게임을 만든다. `다시 하기`에도 쓴다.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - phase가 'start'인 게임  
+<a name="startGame"></a>
+
+## startGame(game) ⇒ <code>Object</code>
+게임을 시작한다.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - phase가 'play'인 새 게임  
+
+| Param | Type |
+| --- | --- |
+| game | <code>Object</code> | 
+
+<a name="playTurn"></a>
+
+## playTurn(game, choiceId, random) ⇒ <code>Object</code>
+선택 하나를 적용하고 순찰, 회식, 엔딩 순서로 판정한다.`random`은 0 이상 1 미만의 수를 돌려주는 함수이다.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - 새 게임. play가 아니거나 회식 중이면 입력 그대로이다.  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| game | <code>Object</code> |  |
+| choiceId | <code>string</code> | coding, smoke, sneak, home, idle 중 하나 |
+| random | <code>function</code> |  |
+
+<a name="answerDinner"></a>
+
+## answerDinner(game, attends) ⇒ <code>Object</code>
+회식에 답한다. 효과를 적용하고 엔딩과 발표 진입을 다시 확인한다.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - 새 게임. 회식 중이 아니면 입력 그대로이다.  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| game | <code>Object</code> |  |
+| attends | <code>boolean</code> | 참석하면 true |
+
+<a name="finishPresentation"></a>
+
+## finishPresentation(game) ⇒ <code>Object</code>
+발표 점수(실력 + 완성 수 x 8)를 내고 엔딩으로 보낸다.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - phase가 'ending'인 새 게임  
+
+| Param | Type |
+| --- | --- |
+| game | <code>Object</code> | 
+
+<a name="completeTarget"></a>
+
+## completeTarget(game) ⇒ <code>Object</code>
+함수 이름 하나를 완성한 것으로 센다. 모두 완성하면 발표를 끝낸다.
+
+**Kind**: global function  
+
+| Param | Type |
+| --- | --- |
+| game | <code>Object</code> | 
+
+<a name="timeoutTurn"></a>
+
+## timeoutTurn(game, turn, random) ⇒ <code>Object</code>
+시간 초과를 처리한다. 예약할 때의 턴 번호가 지금과 다르면 아무것도 하지 않는다.회식 중이면 불참, 발표 중이면 발표 종료, 선택 중이면 멍때리기이다.
+
+**Kind**: global function  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| game | <code>Object</code> |  |
+| turn | <code>number</code> | 예약할 때의 턴 번호 |
+| random | <code>function</code> |  |
+
+<a name="judgeTyping"></a>
+
+## judgeTyping(target, typed) ⇒ <code>Array.&lt;{char: string, status: (&#x27;correct&#x27;\|&#x27;wrong&#x27;\|&#x27;pending&#x27;)}&gt;</code>
+입력을 함수 이름과 위치별로 비교한다. 대소문자를 구분하고, 입력이 더 길어도 target 길이까지만 낸다.
+
+**Kind**: global function  
+
+| Param | Type |
+| --- | --- |
+| target | <code>string</code> | 
+| typed | <code>string</code> | 
+
+<a name="getTitle"></a>
+
+## getTitle(stats) ⇒ <code>string</code>
+스탯으로 칭호를 고른다. 앞의 조건이 먼저이다.
+
+**Kind**: global function  
+
+| Param | Type |
+| --- | --- |
+| stats | <code>Object</code> | 
 
 <a name="Change"></a>
 
