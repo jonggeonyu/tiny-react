@@ -408,6 +408,7 @@ Hook 규칙을 어기면 값이 조용히 어긋나서 찾기 어려우므로, �
 
 effect가 `setState`를 계속 부르면 마이크로태스크가 끝나지 않아 탭이 멈춘다.
 그래서 effect를 실행하는 동안 예약한 횟수를 세고, 연속 50번을 넘으면 오류를 던진다. effect 밖에서 예약하면 횟수를 0으로 되돌린다.
+오류를 던질 때는 횟수를 0으로 되돌리고 `isStale`을 `true`로 둔다. 칸의 값은 이미 바뀌었는데 렌더가 예약되지 않았기 때문이다.
 
 ### useEffect
 `useEffect(effect, deps)`는 렌더 중에 deps만 비교하고, 달라졌으면 실행 목록에 넣는다.
@@ -418,6 +419,7 @@ effect 안에서 DOM을 읽을 수 있어야 하므로 실행은 `patch` 뒤에 
 - 칸의 deps는 effect를 실행할 때 저장한다. 렌더나 `patch`가 실패해 effect가 실행되지 않으면 다음 렌더에서 다시 실행 목록에 들어간다.
 - 실행할 때는 실행 목록을 먼저 비운 뒤, 이전 cleanup을 모두 실행하고, effect를 차례로 실행한다.
 - effect가 함수를 돌려주면 cleanup으로 저장하고, 함수가 아니면 cleanup을 비운다.
+- 실행 목록의 effect는 cleanup을 실행하기 전에 칸의 deps를 비운다. deps는 effect를 호출하기 직전에 저장하고, cleanup은 호출하기 전에 칸에서 비운다. 그래서 오류를 던진 effect는 deps가 바뀔 때까지 다시 실행되지 않고, 뒤에서 실행되지 못한 effect는 deps가 이전 값으로 돌아가도 다음 렌더에서 실행되며, cleanup은 두 번 돌지 않는다.
 
 `unmount()`가 없으므로 마지막 cleanup은 실행되지 않는다.
 실제 React와 달리 effect는 화면을 그리기 전에 동기로 실행한다.

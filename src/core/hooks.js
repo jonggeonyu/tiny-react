@@ -112,10 +112,68 @@ function createStateHook(component, initial) {
  *
  * @param {*} initial 첫 렌더에서 쓸 초기값
  * @returns {Array} `[값, setState]`. `setState`는 렌더마다 같은 함수이다.
- * @throws {Error} 렌더 밖이나 자식 컴포넌트에서 호출했거나, Hook 개수나 종류가 첫 렌더와 다르면 던진다. `setState`는 렌더 중에 호출하면 던진다.
+ * @throws {Error} 렌더 밖이나 자식 컴포넌트에서 호출했거나, Hook 개수나 종류가 첫 렌더와 다르면 던진다. `setState`는 렌더 중에 호출하거나, effect에서 연속으로 예약한 횟수가 50번을 넘으면 던진다.
  */
 export function useState(initial) {
   const hook = nextHook('state', (component) => createStateHook(component, initial));
 
   return [hook.state, hook.setState];
+}
+
+/**
+ * 두 deps가 달라서 다시 실행해야 하는지 판단한다.
+ * deps가 없으면 항상 다르다. 길이가 다르면 다르고, 항목은 `Object.is`로 비교한다.
+ *
+ * @private
+ * @param {Array} [oldDeps] 칸에 저장한 deps. 아직 저장하지 않았으면 없다.
+ * @param {Array} [newDeps] 이번 렌더의 deps
+ * @returns {boolean} 달라졌으면 `true`
+ */
+function depsChanged(oldDeps, newDeps) {
+  if (!oldDeps || !newDeps) return true;
+  if (oldDeps.length !== newDeps.length) return true;
+
+  return newDeps.some((dep, index) => !Object.is(dep, oldDeps[index]));
+}
+
+/**
+ * 화면을 반영한 뒤에 실행할 일을 등록한다. 루트 컴포넌트의 렌더 중에만 호출할 수 있다.
+ * 렌더 중에는 deps만 비교하고, 달라졌으면 실행 목록에 넣는다.
+ * deps가 없으면 렌더마다, `[]`이면 첫 렌더에만, 값이 있으면 값이 바뀐 렌더에 실행한다.
+ * `effect`가 함수를 돌려주면 cleanup으로 저장해 다음 실행 전에 호출한다.
+ * `unmount()`가 없으므로 마지막 cleanup은 실행되지 않는다.
+ *
+ * @param {Function} effect 화면 반영 뒤에 실행할 함수
+ * @param {Array} [deps] 비교할 값의 배열
+ * @returns {void}
+ * @throws {Error} 렌더 밖이나 자식 컴포넌트에서 호출했거나, Hook 개수나 종류가 첫 렌더와 다르면 던진다.
+ */
+export function useEffect(effect, deps) {
+  const hook = nextHook('effect', () => ({ kind: 'effect', deps: undefined, cleanup: undefined }));
+
+  // 칸의 deps는 실행할 때 저장한다. 렌더나 patch가 실패하면 다음 렌더에서 다시 목록에 들어간다.
+  if (depsChanged(hook.deps, deps)) {
+    currentComponent.pendingEffects.push({ hook, effect, deps });
+  }
+}
+
+/**
+ * 계산한 값을 렌더 사이에 저장한다. 루트 컴포넌트의 렌더 중에만 호출할 수 있다.
+ * deps가 같으면 `compute`를 실행하지 않고 저장한 값을 돌려준다. deps가 없으면 렌더마다 계산한다.
+ * 값이 이번 Virtual DOM에 쓰이므로 렌더 중에 계산한다.
+ *
+ * @param {Function} compute 값을 계산하는 함수
+ * @param {Array} [deps] 비교할 값의 배열
+ * @returns {*} 계산했거나 저장해 둔 값
+ * @throws {Error} 렌더 밖이나 자식 컴포넌트에서 호출했거나, Hook 개수나 종류가 첫 렌더와 다르면 던진다.
+ */
+export function useMemo(compute, deps) {
+  const hook = nextHook('memo', () => ({ kind: 'memo', value: undefined, deps: undefined }));
+
+  if (depsChanged(hook.deps, deps)) {
+    hook.value = compute();
+    hook.deps = deps;
+  }
+
+  return hook.value;
 }

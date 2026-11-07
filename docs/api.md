@@ -3,7 +3,7 @@
 <dl>
 <dt><a href="#FunctionComponent">FunctionComponent</a></dt>
 <dd><p>함수형 루트 컴포넌트를 감싸 Hook 칸과 화면을 관리한다.
-렌더 순서는 컴포넌트 실행, 새 Virtual DOM 생성, <code>diff</code>, <code>patch</code>이다.</p>
+렌더 순서는 컴포넌트 실행, 새 Virtual DOM 생성, <code>diff</code>, <code>patch</code>, effect 실행이다.</p>
 </dd>
 <dt><a href="#StateHistory">StateHistory</a></dt>
 <dd><p>Virtual DOM의 기록을 리스트와 현재 위치를 가리키는 포인터로 관리한다.
@@ -86,6 +86,18 @@ Virtual DOM은 만든 뒤 수정하지 않는 값이므로 복사하지 않고 �
 화면은 <code>setState</code> 직후가 아니라 마이크로태스크에서 바뀐다.
 함수 초기값을 호출하는 지연 초기값은 지원하지 않는다.</p>
 </dd>
+<dt><a href="#useEffect">useEffect(effect, [deps])</a> ⇒ <code>void</code></dt>
+<dd><p>화면을 반영한 뒤에 실행할 일을 등록한다. 루트 컴포넌트의 렌더 중에만 호출할 수 있다.
+렌더 중에는 deps만 비교하고, 달라졌으면 실행 목록에 넣는다.
+deps가 없으면 렌더마다, <code>[]</code>이면 첫 렌더에만, 값이 있으면 값이 바뀐 렌더에 실행한다.
+<code>effect</code>가 함수를 돌려주면 cleanup으로 저장해 다음 실행 전에 호출한다.
+<code>unmount()</code>가 없으므로 마지막 cleanup은 실행되지 않는다.</p>
+</dd>
+<dt><a href="#useMemo">useMemo(compute, [deps])</a> ⇒ <code>*</code></dt>
+<dd><p>계산한 값을 렌더 사이에 저장한다. 루트 컴포넌트의 렌더 중에만 호출할 수 있다.
+deps가 같으면 <code>compute</code>를 실행하지 않고 저장한 값을 돌려준다. deps가 없으면 렌더마다 계산한다.
+값이 이번 Virtual DOM에 쓰이므로 렌더 중에 계산한다.</p>
+</dd>
 <dt><a href="#vdomToHtml">vdomToHtml(root)</a> ⇒ <code>string</code></dt>
 <dd><p>루트 Virtual DOM을 HTML 문자열로 바꾼다.
 문서에 붙이지 않은 임시 요소에 그린 뒤 <code>innerHTML</code>을 읽으므로, 이스케이프는 브라우저가 처리한다.
@@ -136,7 +148,7 @@ Virtual DOM은 만든 뒤 수정하지 않는 값이므로 복사하지 않고 �
 
 ## FunctionComponent
 함수형 루트 컴포넌트를 감싸 Hook 칸과 화면을 관리한다.
-렌더 순서는 컴포넌트 실행, 새 Virtual DOM 생성, `diff`, `patch`이다.
+렌더 순서는 컴포넌트 실행, 새 Virtual DOM 생성, `diff`, `patch`, effect 실행이다.
 
 **Kind**: global class  
 
@@ -160,26 +172,29 @@ Virtual DOM은 만든 뒤 수정하지 않는 값이므로 복사하지 않고 �
 <a name="FunctionComponent+mount"></a>
 
 ### functionComponent.mount() ⇒ <code>void</code>
-처음 렌더해서 영역의 내용을 그린다.
-실패하면 마운트되지 않은 상태로 남고 영역의 내용은 그대로이다.
+처음 렌더해서 영역의 내용을 그린 뒤 effect를 실행한다.
+렌더나 그리기가 실패하면 마운트되지 않은 상태로 남고 영역의 내용은 그대로이다.
+effect가 실패하면 오류를 던지지만 마운트는 끝난 상태이다.
 
 **Kind**: instance method of [<code>FunctionComponent</code>](#FunctionComponent)  
 **Throws**:
 
-- <code>Error</code> 렌더 중에 호출했거나, 이미 마운트했거나, 렌더 또는 그리기가 실패하면 던진다.
+- <code>Error</code> 렌더 중에 호출했거나, 이미 마운트했거나, 렌더, 그리기, effect가 실패하면 던진다.
 
 <a name="FunctionComponent+update"></a>
 
 ### functionComponent.update() ⇒ <code>void</code>
-다시 렌더해서 바뀐 부분만 화면에 반영한다.
+다시 렌더해서 바뀐 부분만 화면에 반영한 뒤 effect를 실행한다.
+변경 목록이 비어 있어도 effect는 실행한다.
 렌더가 실패하면 화면과 `vdom`은 그대로이다.
 `patch`가 실패하면 이전 `vdom`으로 영역을 다시 그리고, `vdom`은 갱신하지 않는다.
-렌더나 `patch`가 실패하면 `isStale`이 `true`가 되고, 성공하면 `false`가 된다.
+렌더나 `patch`가 실패하면 effect를 실행하지 않고 `isStale`이 `true`가 되고, 성공하면 `false`가 된다.
+effect의 실패는 렌더 실패가 아니므로 오류만 던지고 `isStale`은 바꾸지 않는다.
 
 **Kind**: instance method of [<code>FunctionComponent</code>](#FunctionComponent)  
 **Throws**:
 
-- <code>Error</code> 렌더 중에 호출했거나, 마운트 전이거나, 렌더 또는 `patch`가 실패하면 던진다.
+- <code>Error</code> 렌더 중에 호출했거나, 마운트 전이거나, 렌더, `patch`, effect가 실패하면 던진다.
 
 <a name="FunctionComponent+scheduleUpdate"></a>
 
@@ -187,8 +202,13 @@ Virtual DOM은 만든 뒤 수정하지 않는 값이므로 복사하지 않고 �
 `update()`를 마이크로태스크로 예약한다. 이미 예약되어 있으면 아무것도 하지 않는다.
 한 핸들러의 여러 `setState`가 렌더 한 번으로 묶인다.
 `update()`의 오류는 마이크로태스크에서 던져지므로 호출한 쪽으로 돌아오지 않는다.
+effect를 실행하는 동안 예약한 횟수를 세고, effect 밖에서 예약하면 횟수를 0으로 되돌린다.
 
 **Kind**: instance method of [<code>FunctionComponent</code>](#FunctionComponent)  
+**Throws**:
+
+- <code>Error</code> effect에서 연속으로 예약한 횟수가 50번을 넘으면 던진다. 마이크로태스크가 끝나지 않아 탭이 멈추는 것을 막는다.
+
 <a name="StateHistory"></a>
 
 ## StateHistory
@@ -459,12 +479,51 @@ Virtual DOM 노드를 만든다. JSX 대신 쓴다.
 **Returns**: <code>Array</code> - `[값, setState]`. `setState`는 렌더마다 같은 함수이다.  
 **Throws**:
 
-- <code>Error</code> 렌더 밖이나 자식 컴포넌트에서 호출했거나, Hook 개수나 종류가 첫 렌더와 다르면 던진다. `setState`는 렌더 중에 호출하면 던진다.
+- <code>Error</code> 렌더 밖이나 자식 컴포넌트에서 호출했거나, Hook 개수나 종류가 첫 렌더와 다르면 던진다. `setState`는 렌더 중에 호출하거나, effect에서 연속으로 예약한 횟수가 50번을 넘으면 던진다.
 
 
 | Param | Type | Description |
 | --- | --- | --- |
 | initial | <code>\*</code> | 첫 렌더에서 쓸 초기값 |
+
+<a name="useEffect"></a>
+
+## useEffect(effect, [deps]) ⇒ <code>void</code>
+화면을 반영한 뒤에 실행할 일을 등록한다. 루트 컴포넌트의 렌더 중에만 호출할 수 있다.
+렌더 중에는 deps만 비교하고, 달라졌으면 실행 목록에 넣는다.
+deps가 없으면 렌더마다, `[]`이면 첫 렌더에만, 값이 있으면 값이 바뀐 렌더에 실행한다.
+`effect`가 함수를 돌려주면 cleanup으로 저장해 다음 실행 전에 호출한다.
+`unmount()`가 없으므로 마지막 cleanup은 실행되지 않는다.
+
+**Kind**: global function  
+**Throws**:
+
+- <code>Error</code> 렌더 밖이나 자식 컴포넌트에서 호출했거나, Hook 개수나 종류가 첫 렌더와 다르면 던진다.
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| effect | <code>function</code> | 화면 반영 뒤에 실행할 함수 |
+| [deps] | <code>Array</code> | 비교할 값의 배열 |
+
+<a name="useMemo"></a>
+
+## useMemo(compute, [deps]) ⇒ <code>\*</code>
+계산한 값을 렌더 사이에 저장한다. 루트 컴포넌트의 렌더 중에만 호출할 수 있다.
+deps가 같으면 `compute`를 실행하지 않고 저장한 값을 돌려준다. deps가 없으면 렌더마다 계산한다.
+값이 이번 Virtual DOM에 쓰이므로 렌더 중에 계산한다.
+
+**Kind**: global function  
+**Returns**: <code>\*</code> - 계산했거나 저장해 둔 값  
+**Throws**:
+
+- <code>Error</code> 렌더 밖이나 자식 컴포넌트에서 호출했거나, Hook 개수나 종류가 첫 렌더와 다르면 던진다.
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| compute | <code>function</code> | 값을 계산하는 함수 |
+| [deps] | <code>Array</code> | 비교할 값의 배열 |
 
 <a name="vdomToHtml"></a>
 
