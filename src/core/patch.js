@@ -1,4 +1,4 @@
-import { createDom, setProp } from './createDom.js';
+import { createDom, removeProp, setProp } from './createDom.js';
 
 /**
  * 영역에서 `path`를 따라 `childNodes`로 내려가 노드를 찾는다.
@@ -17,14 +17,14 @@ function findNode(container, path) {
  *
  * @private
  * @param {Element} element 속성을 바꿀 요소
- * @param {Object<string, string>} set 새로 생기거나 값이 바뀐 속성
+ * @param {Object<string, string | Function>} set 새로 생기거나 값이 바뀐 속성. 함수는 이벤트 핸들러이다.
  * @param {Array<string>} remove 사라진 속성의 이름
  * @returns {void}
  */
 function applyProps(element, set, remove) {
   // HTML 속성 이름은 대소문자를 구분하지 않으므로, set을 먼저 하면 { a: '1' }이 { A: '1' }로 바뀔 때 넣은 속성이 곧바로 지워진다.
   for (const name of remove) {
-    element.removeAttribute(name);
+    removeProp(element, name);
   }
 
   // Object.entries는 자기 속성만 돌려주므로 __proto__ 같은 이름도 값으로 읽힌다.

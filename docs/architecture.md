@@ -143,7 +143,7 @@ JSDoc은 `_`로 시작하는 파일을 기본으로 제외하므로, `src/`의 �
 - `REMOVE`는 찾은 노드를 `remove`로 지운다.
 - `TEXT`는 찾은 노드의 `nodeValue`를 바꾼다.
 - `REPLACE`는 찾은 노드를 `createDom(node)`로 `replaceWith`한다.
-- `PROPS`는 `remove`를 `removeAttribute`로 먼저 적용하고, `set`을 `setProp`으로 적용한다. HTML 속성 이름은 대소문자를 구분하지 않으므로, 순서가 반대이면 `{ a: '1' }`이 `{ A: '1' }`로 바뀔 때 넣은 속성이 곧바로 지워진다.
+- `PROPS`는 `remove`를 `removeProp`으로 먼저 적용하고, `set`을 `setProp`으로 적용한다. HTML 속성 이름은 대소문자를 구분하지 않으므로, 순서가 반대이면 `{ a: '1' }`이 `{ A: '1' }`로 바뀔 때 넣은 속성이 곧바로 지워진다.
 
 `path`가 맞으려면 실제 DOM의 `childNodes`와 Virtual DOM의 `children`이 번호까지 일치해야 한다.
 
@@ -432,7 +432,8 @@ effect 안에서 DOM을 읽을 수 있어야 하므로 실행은 `patch` 뒤에 
 3. `input`과 `textarea`의 `value`는 프로퍼티와 값이 다를 때 프로퍼티도 맞춘다. `file` 타입은 제외한다.
 4. `input`의 `checked`는 프로퍼티를 `true`로 맞춘다.
 
-`removeProp(element, name)`은 `removeAttribute`를 부른 뒤, `on`으로 시작하는 이름은 프로퍼티를 `null`로, `checked`는 `false`로, `input`과 `textarea`의 `value`는 `''`로 되돌린다. `file` 타입의 `value`는 건드리지 않는다.
+`removeProp(element, name)`은 `on`으로 시작하는 이름은 프로퍼티를 `null`로, `checked`는 `false`로, `input`과 `textarea`의 `value`는 `''`로 되돌린 뒤 `removeAttribute`를 부른다. `file` 타입의 `value`는 건드리지 않는다.
+`removeAttribute`를 마지막에 부르는 이유: `checkbox`, `radio`, `hidden`, 버튼 종류의 `input`은 `value` 대입이 속성에 쓰이므로, 먼저 지우면 지운 속성이 `value=""`로 되살아난다.
 `patch`의 `PROPS`는 `removeAttribute` 대신 이 함수를 부른다. `remove`를 먼저 적용하는 순서는 그대로이다.
 
 이벤트에 `addEventListener`를 쓰지 않는 이유: 핸들러는 렌더마다 새 함수이므로 `setProp`이 계속 호출되고, 이전 함수를 기억해서 떼지 않으면 핸들러가 쌓인다. 프로퍼티 대입은 새 함수가 이전 함수를 교체하므로 이전 값이 필요 없다.

@@ -7,7 +7,7 @@
  * @property {Array<number>} path 루트에서 `childNodes` 번호를 따라가는 경로
  * @property {VNode} [node] `ADD`와 `REPLACE`에서 새로 넣을 노드
  * @property {string} [value] `TEXT`의 새 내용
- * @property {Object<string, string>} [set] `PROPS`에서 새로 생기거나 값이 바뀐 속성
+ * @property {Object<string, string | Function>} [set] `PROPS`에서 새로 생기거나 값이 바뀐 속성. 함수는 이벤트 핸들러이다.
  * @property {Array<string>} [remove] `PROPS`에서 사라진 속성의 이름
  */
 
@@ -15,8 +15,8 @@
  * 같은 `type`인 두 요소의 속성을 비교해 바뀐 속성이 있으면 변경 목록에 넣는다.
  *
  * @private
- * @param {Object<string, string>} oldProps 이전 속성
- * @param {Object<string, string>} newProps 새 속성
+ * @param {Object<string, string | Function>} oldProps 이전 속성
+ * @param {Object<string, string | Function>} newProps 새 속성
  * @param {Array<number>} path 요소의 경로
  * @param {Array<Change>} changes 변경을 모으는 목록
  * @returns {void}

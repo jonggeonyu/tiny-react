@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { createDom, renderRoot, setProp } from '../../src/core/createDom.js';
+import { describe, expect, it, vi } from 'vitest';
+import { createDom, removeProp, renderRoot, setProp } from '../../src/core/createDom.js';
 import { containerToVdom } from '../../src/core/domToVdom.js';
+import { htmlToVdom, vdomToHtml } from '../../src/core/html.js';
 
 /** 요소 노드를 만든다. */
 function el(type, props = {}, children = []) {
@@ -71,6 +72,254 @@ describe('setProp', () => {
     setProp(element, name, 'x');
 
     expect(element.getAttribute(name)).toBe('x');
+  });
+
+  describe('이벤트', () => {
+    it('onClick 함수는 클릭에 실행되고 속성에 나타나지 않는다', () => {
+      const element = document.createElement('button');
+      const handler = vi.fn();
+
+      setProp(element, 'onClick', handler);
+      element.click();
+
+      expect(handler).toHaveBeenCalledOnce();
+      expect(element.attributes).toHaveLength(0);
+    });
+
+    it('다시 넣으면 새 함수만 실행된다', () => {
+      const element = document.createElement('button');
+      const oldHandler = vi.fn();
+      const newHandler = vi.fn();
+
+      setProp(element, 'onClick', oldHandler);
+      setProp(element, 'onClick', newHandler);
+      element.click();
+
+      expect(oldHandler).not.toHaveBeenCalled();
+      expect(newHandler).toHaveBeenCalledOnce();
+    });
+
+    it('문자열 onclick은 속성으로 들어간다', () => {
+      const element = document.createElement('button');
+
+      setProp(element, 'onclick', 'run()');
+
+      expect(element.getAttribute('onclick')).toBe('run()');
+    });
+
+    it('createDom도 같은 경로로 핸들러를 넣는다', () => {
+      const handler = vi.fn();
+
+      const node = createDom(el('button', { onClick: handler }));
+      node.click();
+
+      expect(handler).toHaveBeenCalledOnce();
+      expect(node.outerHTML).toBe('<button></button>');
+    });
+  });
+
+  describe('value', () => {
+    it('입력 뒤에 빈 문자열을 넣으면 화면 값이 비워지고 속성이 남는다', () => {
+      const element = document.createElement('input');
+      element.value = '입력한 값';
+
+      setProp(element, 'value', '');
+
+      expect(element.value).toBe('');
+      expect(element.outerHTML).toBe('<input value="">');
+    });
+
+    it('입력 뒤에 다른 값을 넣으면 화면 값과 속성이 바뀐다', () => {
+      const element = document.createElement('input');
+      element.value = '입력한 값';
+
+      setProp(element, 'value', '사과');
+
+      expect(element.value).toBe('사과');
+      expect(element.outerHTML).toBe('<input value="사과">');
+    });
+
+    it('textarea도 입력 뒤에 넣은 값이 화면에 나오고 속성이 남는다', () => {
+      const element = document.createElement('textarea');
+      element.value = '입력한 값';
+
+      setProp(element, 'value', '');
+
+      expect(element.value).toBe('');
+      expect(element.outerHTML).toBe('<textarea value=""></textarea>');
+    });
+
+    it.each(['input', 'textarea'])('%s의 값이 같으면 value에 대입하지 않는다', (type) => {
+      const element = document.createElement(type);
+      element.value = '사과';
+      const assign = vi.spyOn(element, 'value', 'set');
+
+      setProp(element, 'value', '사과');
+
+      expect(assign).not.toHaveBeenCalled();
+      expect(element.getAttribute('value')).toBe('사과');
+    });
+
+    it('값이 다르면 value에 한 번만 대입한다', () => {
+      const element = document.createElement('input');
+      element.value = '사과';
+      const assign = vi.spyOn(element, 'value', 'set');
+
+      setProp(element, 'value', '배');
+
+      expect(assign).toHaveBeenCalledExactlyOnceWith('배');
+    });
+
+    it('input과 textarea가 아니면 프로퍼티를 건드리지 않는다', () => {
+      const element = document.createElement('li');
+      const assign = vi.spyOn(element, 'value', 'set');
+
+      setProp(element, 'value', '3');
+
+      expect(assign).not.toHaveBeenCalled();
+      expect(element.getAttribute('value')).toBe('3');
+    });
+
+    it('file 타입에 value를 넣어도 오류가 없다', () => {
+      const element = document.createElement('input');
+      element.type = 'file';
+
+      expect(() => setProp(element, 'value', 'a.txt')).not.toThrow();
+      expect(element.value).toBe('');
+      expect(element.getAttribute('value')).toBe('a.txt');
+    });
+
+    it('<input value="사과">의 vdomToHtml 결과가 바뀌지 않는다', () => {
+      const html = '<input value="사과">';
+
+      expect(vdomToHtml(htmlToVdom(html))).toBe(html);
+    });
+  });
+
+  describe('checked', () => {
+    it("checked: ''를 넣으면 체크되고 속성이 남는다", () => {
+      const element = document.createElement('input');
+      element.type = 'checkbox';
+
+      setProp(element, 'checked', '');
+
+      expect(element.checked).toBe(true);
+      expect(element.getAttribute('checked')).toBe('');
+    });
+
+    it('사용자가 해제한 뒤에 넣어도 다시 체크된다', () => {
+      const element = document.createElement('input');
+      element.type = 'checkbox';
+      element.click();
+      element.click();
+
+      setProp(element, 'checked', '');
+
+      expect(element.checked).toBe(true);
+    });
+
+    it('input이 아니면 프로퍼티를 넣지 않는다', () => {
+      const element = document.createElement('div');
+
+      setProp(element, 'checked', '');
+
+      expect(element.getAttribute('checked')).toBe('');
+      expect(Object.hasOwn(element, 'checked')).toBe(false);
+    });
+  });
+});
+
+describe('removeProp', () => {
+  it('속성을 지운다', () => {
+    const element = document.createElement('div');
+    element.setAttribute('id', 'a');
+
+    removeProp(element, 'id');
+
+    expect(element.attributes).toHaveLength(0);
+  });
+
+  it('없는 속성을 지워도 오류가 없다', () => {
+    expect(() => removeProp(document.createElement('div'), 'id')).not.toThrow();
+  });
+
+  it('핸들러를 지운다', () => {
+    const element = document.createElement('button');
+    const handler = vi.fn();
+    setProp(element, 'onClick', handler);
+
+    removeProp(element, 'onClick');
+    element.click();
+
+    expect(handler).not.toHaveBeenCalled();
+    expect(element.onclick).toBeNull();
+  });
+
+  it('문자열 onclick 속성을 지운다', () => {
+    const element = document.createElement('button');
+    setProp(element, 'onclick', 'run()');
+
+    removeProp(element, 'onclick');
+
+    expect(element.hasAttribute('onclick')).toBe(false);
+  });
+
+  it('checked를 해제한다', () => {
+    const element = document.createElement('input');
+    element.type = 'checkbox';
+    setProp(element, 'checked', '');
+
+    removeProp(element, 'checked');
+
+    expect(element.checked).toBe(false);
+    expect(element.hasAttribute('checked')).toBe(false);
+  });
+
+  it.each(['input', 'textarea'])('%s의 value를 비운다', (type) => {
+    const element = document.createElement(type);
+    setProp(element, 'value', '사과');
+    element.value = '입력한 값';
+
+    removeProp(element, 'value');
+
+    expect(element.value).toBe('');
+    expect(element.hasAttribute('value')).toBe(false);
+  });
+
+  it.each(['checkbox', 'radio', 'hidden', 'submit', 'button', 'reset', 'image'])(
+    '%s 타입은 value 대입이 속성에 쓰여도 속성이 남지 않는다',
+    (type) => {
+      const element = document.createElement('input');
+      element.type = type;
+      setProp(element, 'value', '사과');
+
+      removeProp(element, 'value');
+
+      expect(element.hasAttribute('value')).toBe(false);
+    },
+  );
+
+  it('input과 textarea가 아니면 value 프로퍼티를 건드리지 않는다', () => {
+    const element = document.createElement('li');
+    setProp(element, 'value', '3');
+    const assign = vi.spyOn(element, 'value', 'set');
+
+    removeProp(element, 'value');
+
+    expect(assign).not.toHaveBeenCalled();
+    expect(element.hasAttribute('value')).toBe(false);
+  });
+
+  it('file 타입의 value를 지워도 오류가 없고 프로퍼티에 대입하지 않는다', () => {
+    const element = document.createElement('input');
+    element.type = 'file';
+    setProp(element, 'value', 'a.txt');
+    const assign = vi.spyOn(element, 'value', 'set');
+
+    expect(() => removeProp(element, 'value')).not.toThrow();
+
+    expect(assign).not.toHaveBeenCalled();
+    expect(element.hasAttribute('value')).toBe(false);
   });
 });
 

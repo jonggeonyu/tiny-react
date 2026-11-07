@@ -3,7 +3,7 @@
  *
  * @typedef {object} VElement
  * @property {string} type 소문자 태그 이름
- * @property {Object<string, string>} props 속성 이름과 값. 속성이 없으면 `{}`이다.
+ * @property {Object<string, string | Function>} props 속성 이름과 값. 함수는 이벤트 핸들러이다. 속성이 없으면 `{}`이다.
  * @property {Array<VNode>} children 자식 노드 목록. 항상 배열이다.
  */
 

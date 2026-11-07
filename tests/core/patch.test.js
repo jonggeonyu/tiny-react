@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createDom, renderRoot, setProp } from '../../src/core/createDom.js';
+import { createDom, removeProp, renderRoot, setProp } from '../../src/core/createDom.js';
 import { diff } from '../../src/core/diff.js';
 import { containerToVdom } from '../../src/core/domToVdom.js';
 import { htmlToVdom } from '../../src/core/html.js';
@@ -295,6 +295,72 @@ describe('patch', () => {
       patch(container, [{ kind: 'PROPS', path: [0], set: { class: 'b' }, remove: [] }]);
 
       expect(setProp).toHaveBeenCalledExactlyOnceWith(container.firstChild, 'class', 'b');
+    });
+
+    it('removeProp으로 속성을 지운다', () => {
+      const container = renderedOf(rootOf(el('p', { id: 'a' })));
+      vi.clearAllMocks();
+
+      patch(container, [{ kind: 'PROPS', path: [0], set: {}, remove: ['id'] }]);
+
+      expect(removeProp).toHaveBeenCalledExactlyOnceWith(container.firstChild, 'id');
+      expect(setProp).not.toHaveBeenCalled();
+    });
+
+    it('remove를 set보다 먼저 적용한다', () => {
+      const container = renderedOf(rootOf(el('p', { a: '1' })));
+      vi.clearAllMocks();
+
+      patch(container, [{ kind: 'PROPS', path: [0], set: { A: '1' }, remove: ['a'] }]);
+
+      expect(removeProp.mock.invocationCallOrder[0]).toBeLessThan(setProp.mock.invocationCallOrder[0]);
+    });
+
+    it("remove: ['onClick']을 적용하면 클릭해도 실행되지 않는다", () => {
+      const handler = vi.fn();
+      const container = renderedOf(rootOf(el('button', { onClick: handler })));
+
+      patch(container, [{ kind: 'PROPS', path: [0], set: {}, remove: ['onClick'] }]);
+      container.firstChild.click();
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('핸들러가 새 함수로 바뀌면 같은 요소에서 새 함수만 실행된다', () => {
+      const oldHandler = vi.fn();
+      const newHandler = vi.fn();
+      const from = rootOf(el('button', { onClick: oldHandler }));
+      const to = rootOf(el('button', { onClick: newHandler }));
+      const container = renderedOf(from);
+      const button = container.firstChild;
+
+      patch(container, diff(from, to));
+      container.firstChild.click();
+
+      expect(container.firstChild).toBe(button);
+      expect(oldHandler).not.toHaveBeenCalled();
+      expect(newHandler).toHaveBeenCalledOnce();
+    });
+
+    it('input의 value 속성이 사라지면 입력한 값도 비워진다', () => {
+      const from = rootOf(el('input', { value: '사과' }));
+      const container = renderedOf(from);
+      container.firstChild.value = '입력한 값';
+
+      patch(container, diff(from, rootOf(el('input'))));
+
+      expect(container.firstChild.value).toBe('');
+      expect(container.innerHTML).toBe('<input>');
+    });
+
+    it('checkbox의 value 속성이 사라지면 새 Virtual DOM과 일치한다', () => {
+      const from = rootOf(el('input', { type: 'checkbox', value: '사과' }));
+      const to = rootOf(el('input', { type: 'checkbox' }));
+
+      const container = patched(from, to);
+
+      expect(containerToVdom(container)).toStrictEqual(to);
+      expect(container.firstChild.value).toBe('on');
     });
 
     it.each(['constructor', '__proto__', 'toString', 'hasOwnProperty'])('내장 이름 속성 %s를 추가하고 지운다', (name) => {
