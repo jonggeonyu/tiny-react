@@ -157,6 +157,37 @@ deps가 같으면 <code>compute</code>를 실행하지 않고 저장한 값을 �
 루트도 같은 규칙이므로 루트에 텍스트가 섞이면 결과는 <code>vdomToHtml(root)</code>와 같다.
 이스케이프와 직렬화는 <code>vdomToHtml</code>을 그대로 쓰며, 왕복의 범위도 <code>vdomToHtml</code>과 같다.</p>
 </dd>
+<dt><a href="#StartScreen">StartScreen(props)</a> ⇒ <code>Object</code></dt>
+<dd><p>시작 화면. 이름이 공백뿐이면 시작 버튼을 막는다.</p>
+</dd>
+<dt><a href="#StatBar">StatBar(props)</a> ⇒ <code>Object</code></dt>
+<dd><p>스탯과 칭호 표시줄.</p>
+</dd>
+<dt><a href="#ChoiceButton">ChoiceButton(props)</a> ⇒ <code>Object</code></dt>
+<dd><p>선택지 버튼 하나.</p>
+</dd>
+<dt><a href="#EventLog">EventLog(props)</a> ⇒ <code>Object</code></dt>
+<dd><p>사건 기록 목록. 최신 기록이 아래에 온다.</p>
+</dd>
+<dt><a href="#PlayScreen">PlayScreen(props)</a> ⇒ <code>Object</code></dt>
+<dd><p>선택 화면. 회식 중이면 참석과 불참을 보여 준다.</p>
+</dd>
+<dt><a href="#PresentationScreen">PresentationScreen(props)</a> ⇒ <code>Object</code></dt>
+<dd><p>발표 타자 화면. 입력창은 글자 영역의 형제이고, 안내는 입력창 뒤에 두어서 입력창 위치가 바뀌지 않는다.</p>
+</dd>
+<dt><a href="#EndingScreen">EndingScreen(props)</a> ⇒ <code>Object</code></dt>
+<dd><p>엔딩 화면.</p>
+</dd>
+<dt><a href="#readBestScore">readBestScore()</a></dt>
+<dd><p>최고 기록을 읽는다. 저장소를 쓸 수 없으면 0이다.</p>
+</dd>
+<dt><a href="#writeBestScore">writeBestScore()</a></dt>
+<dd><p>최고 기록을 저장한다. 저장소를 쓸 수 없으면 무시한다.</p>
+</dd>
+<dt><a href="#Game">Game()</a> ⇒ <code>Object</code></dt>
+<dd><p>정글 생존기의 루트 컴포넌트. Hook을 쓰는 유일한 컴포넌트이고, 자식은 Props만 받는다.
+난수는 핸들러와 시간 초과 처리에서만 <code>Math.random</code>으로 만든다.</p>
+</dd>
 <dt><a href="#applyEffect">applyEffect(stats, effect)</a> ⇒ <code>Object</code></dt>
 <dd><p>스탯에 변화량을 더하고 0~100으로 제한한 새 객체를 돌려준다.</p>
 </dd>
@@ -745,6 +776,110 @@ HTML 문자열을 루트 Virtual DOM으로 바꾼다.
 | --- | --- | --- |
 | root | [<code>VElement</code>](#VElement) | `type`이 `'root'`인 루트 노드 |
 
+<a name="StartScreen"></a>
+
+## StartScreen(props) ⇒ <code>Object</code>
+시작 화면. 이름이 공백뿐이면 시작 버튼을 막는다.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - Virtual DOM  
+
+| Param | Type |
+| --- | --- |
+| props | <code>Object</code> | 
+
+<a name="StatBar"></a>
+
+## StatBar(props) ⇒ <code>Object</code>
+스탯과 칭호 표시줄.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - Virtual DOM  
+
+| Param | Type |
+| --- | --- |
+| props | <code>Object</code> | 
+
+<a name="ChoiceButton"></a>
+
+## ChoiceButton(props) ⇒ <code>Object</code>
+선택지 버튼 하나.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - Virtual DOM  
+
+| Param | Type |
+| --- | --- |
+| props | <code>Object</code> | 
+
+<a name="EventLog"></a>
+
+## EventLog(props) ⇒ <code>Object</code>
+사건 기록 목록. 최신 기록이 아래에 온다.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - Virtual DOM  
+
+| Param | Type |
+| --- | --- |
+| props | <code>Object</code> | 
+
+<a name="PlayScreen"></a>
+
+## PlayScreen(props) ⇒ <code>Object</code>
+선택 화면. 회식 중이면 참석과 불참을 보여 준다.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - Virtual DOM  
+
+| Param | Type |
+| --- | --- |
+| props | <code>Object</code> | 
+
+<a name="PresentationScreen"></a>
+
+## PresentationScreen(props) ⇒ <code>Object</code>
+발표 타자 화면. 입력창은 글자 영역의 형제이고, 안내는 입력창 뒤에 두어서 입력창 위치가 바뀌지 않는다.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - Virtual DOM  
+
+| Param | Type |
+| --- | --- |
+| props | <code>Object</code> | 
+
+<a name="EndingScreen"></a>
+
+## EndingScreen(props) ⇒ <code>Object</code>
+엔딩 화면.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - Virtual DOM  
+
+| Param | Type |
+| --- | --- |
+| props | <code>Object</code> | 
+
+<a name="readBestScore"></a>
+
+## readBestScore()
+최고 기록을 읽는다. 저장소를 쓸 수 없으면 0이다.
+
+**Kind**: global function  
+<a name="writeBestScore"></a>
+
+## writeBestScore()
+최고 기록을 저장한다. 저장소를 쓸 수 없으면 무시한다.
+
+**Kind**: global function  
+<a name="Game"></a>
+
+## Game() ⇒ <code>Object</code>
+정글 생존기의 루트 컴포넌트. Hook을 쓰는 유일한 컴포넌트이고, 자식은 Props만 받는다.
+난수는 핸들러와 시간 초과 처리에서만 `Math.random`으로 만든다.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - Virtual DOM  
 <a name="applyEffect"></a>
 
 ## applyEffect(stats, effect) ⇒ <code>Object</code>
