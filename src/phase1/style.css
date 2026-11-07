@@ -1,15 +1,62 @@
+:root {
+  --color-primary: #ff5d00;
+  --color-on-primary: #ffffff;
+  --color-error-container: #fcf1f0;
+  --color-background: #ffffff;
+  --color-surface-1: #00000008;
+  --color-overlay: #0000000d;
+  --color-outline-2: #0000001a;
+  --color-on-view-1: #0c0c0c;
+  --color-on-view-2: #373737cc;
+  --color-on-view-3: #949494;
+  --color-on-view-error: #e30f32;
+  --color-dark-background: #0c0c0c;
+  --color-dark-on-view-1: #f3f3f3;
+  --color-dark-outline-2: #ffffff26;
+  --color-dark-orange-muted: #371a07;
+
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --font-mono: ui-monospace, Consolas, monospace;
+
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
 * { box-sizing: border-box; }
+
+html {
+  color-scheme: light;
+  background: var(--color-background);
+}
 
 body {
   margin: 0;
   padding: 24px;
-  font-family: system-ui, sans-serif;
-  color: #222;
-  background: #f5f5f5;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 400;
+  color: var(--color-on-view-1);
+  min-height: 100vh;
+  background: var(--color-surface-1);
 }
 
-h1 { margin: 0 0 16px; font-size: 1.5rem; }
-h2 { margin: 0 0 12px; font-size: 1.1rem; }
+h1 {
+  margin: 0 0 16px;
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+  color: var(--color-on-view-1);
+}
+
+h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+  line-height: 22px;
+  font-weight: 700;
+  color: var(--color-on-view-1);
+}
 
 .panels {
   display: flex;
@@ -21,9 +68,10 @@ h2 { margin: 0 0 12px; font-size: 1.1rem; }
   flex: 1;
   min-width: 0;
   padding: 16px;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  background: var(--color-background);
+  border: 1px solid var(--color-outline-2);
+  border-radius: var(--radius-lg);
+  box-shadow: none;
 }
 
 #actual, #preview, #error {
@@ -31,44 +79,103 @@ h2 { margin: 0 0 12px; font-size: 1.1rem; }
 }
 
 #actual, #preview {
+  overflow-x: auto;
   padding: 12px;
   min-height: 80px;
-  border: 1px dashed #bbb;
-  border-radius: 4px;
+  color: var(--color-on-view-2);
+  border: 1px solid var(--color-outline-2);
+  border-radius: var(--radius-md);
+}
+
+#actual h3, #preview h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 700;
+  color: var(--color-on-view-1);
+}
+
+#actual p, #preview p { margin: 0 0 8px; font-size: 14px; line-height: 20px; }
+#actual strong, #preview strong { font-weight: 700; color: var(--color-on-view-1); }
+#actual ul, #preview ul { margin: 0 0 8px; padding-left: 20px; font-size: 14px; line-height: 20px; }
+
+#actual a, #preview a {
+  color: var(--color-on-view-1);
+  text-decoration: underline;
 }
 
 #source {
   display: block;
   width: 100%;
-  height: 200px;
-  padding: 8px;
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: 0.9rem;
-  border: 1px solid #bbb;
-  border-radius: 4px;
+  height: 280px;
+  padding: 12px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 20px;
+  tab-size: 2;
+  color-scheme: dark;
+  color: var(--color-dark-on-view-1);
+  background: var(--color-dark-background);
+  caret-color: var(--color-primary);
+  border: 1px solid var(--color-dark-outline-2);
+  border-radius: var(--radius-md);
   resize: vertical;
+  overflow: auto;
 }
 
-.buttons { display: flex; gap: 8px; margin: 12px 0 0; }
+#source::selection { background: var(--color-dark-orange-muted); }
+
+#source:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
 
 button {
-  padding: 6px 14px;
+  min-height: 44px;
+  padding: 0 16px;
+  white-space: nowrap;
   font: inherit;
+  font-weight: 500;
+  color: var(--color-on-view-1);
   cursor: pointer;
-  background: #fff;
-  border: 1px solid #888;
-  border-radius: 4px;
+  background: var(--color-surface-1);
+  border: 0;
+  border-radius: var(--radius-md);
+  transition: background-color 120ms linear;
 }
-button:hover { background: #eee; }
+button:hover { background: var(--color-outline-2); }
+
+#patch {
+  font-weight: 700;
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+}
+#patch:hover {
+  background-color: var(--color-primary);
+  background-image: linear-gradient(var(--color-overlay), var(--color-overlay));
+}
+
+button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
 
 #error {
   min-height: 1.5em;
   margin: 8px 0 12px;
-  color: #c00;
 }
 
-.done { text-decoration: line-through; color: #888; }
+#error:not(:empty) {
+  padding: 8px 12px;
+  color: var(--color-on-view-error);
+  background: var(--color-error-container);
+  border-radius: var(--radius-md);
+}
 
-@media (max-width: 720px) {
+.done { text-decoration: line-through; color: var(--color-on-view-2); }
+
+@media (max-width: 639px) {
   .panels { flex-direction: column; align-items: stretch; }
 }
