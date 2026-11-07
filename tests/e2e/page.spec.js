@@ -94,6 +94,22 @@ test.describe('페이지 동작', () => {
     await expect(page.locator('#error')).toHaveAttribute('role', 'alert');
   });
 
+  test('Phase 2로 가는 링크가 동작한다', async ({ page }) => {
+    await page.getByRole('link', { name: 'Phase 2' }).click();
+
+    await expect(page).toHaveURL(/phase2\.html$/);
+  });
+
+  test('input에 입력한 뒤 value를 바꾸는 Patch를 하면 화면 값이 바뀐다', async ({ page }) => {
+    await patchWith(page, '<input value="a">');
+    await page.locator('#actual input').fill('입력');
+
+    await patchWith(page, '<input value="b">');
+
+    await expect(page.locator('#actual input')).toHaveValue('b');
+    expect(await page.locator('#error').textContent()).toBe('');
+  });
+
   test('다크 모드 환경에서도 html 배경은 불투명한 흰색이다', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'dark' });
     await page.goto('/');

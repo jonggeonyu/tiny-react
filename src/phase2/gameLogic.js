@@ -117,6 +117,7 @@ export function answerDinner(game, attends) {
  * @returns {Object} phase가 'ending'인 새 게임
  */
 export function finishPresentation(game) {
+  if (game.phase !== 'presentation') return game;
   const score = game.stats.skill + game.targetIndex * SCORE_PER_TARGET;
   const ending = score >= PASS_SCORE ? 'success' : 'fail';
   return { ...game, phase: 'ending', ending, score, log: [...game.log, ENDINGS[ending].text] };

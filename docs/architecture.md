@@ -371,6 +371,8 @@ JSX 대신 `h(type, props, ...children)`을 쓴다.
 - `patch`가 실패하면 Phase 1처럼 이전 `vdom`을 `renderRoot`로 다시 그리고 오류를 던진다. `vdom`은 갱신하지 않고 effect는 실행하지 않는다.
 - 렌더가 실패하면 화면과 `vdom`은 그대로 두고 오류를 던진다.
 
+`scheduleUpdate()`는 `update()`를 마이크로태스크로 한 번만 예약한다. 내부 도구로 `hooks.js`의 `withCurrentComponent`는 렌더 동안 현재 컴포넌트를 정하고, `withoutHooks`는 자식 컴포넌트를 실행하는 동안 현재 컴포넌트를 비운다.
+
 `unmount()`는 요구사항에 없으므로 만들지 않는다.
 
 `onCommit(changes)`는 `mount()`와 `update()`가 성공한 뒤 맨 끝에서 호출한다. `mount()`의 `changes`는 빈 배열이다.
@@ -459,6 +461,13 @@ Phase 1 영향: `<textarea value="x">내용</textarea>`처럼 `value` 속성이 
 - `select`의 `value`는 지원하지 않는다. `createDom`이 속성을 자식보다 먼저 넣으므로 옵션이 없을 때 값이 들어가 적용되지 않는다.
 - 상태가 입력을 거부할 때 화면의 값을 되돌리지 않는다. 입력 뒤에도 Virtual DOM이 그대로이면 `diff`가 변경을 찾지 못한다.
 - 위치로 비교하므로 조건부 요소가 앞에서 사라지면 뒤쪽 요소가 교체되어 입력 포커스를 잃을 수 있다. 페이지는 입력창의 위치가 바뀌지 않게 만든다.
+- `value` 프로퍼티를 넣은 `textarea`는 이후 자식 텍스트가 바뀌어도 화면 값이 따라가지 않는다. `textarea`의 값은 `value`로 다룬다.
+- Chrome에서 `value`가 `type`보다 앞에 있고 값에 줄바꿈이 있으면 `hidden`, `checkbox` 같은 타입은 줄바꿈을 잃는다. 대소문자만 다른 `VALUE`, `CHECKED`는 Phase 1처럼 지원하지 않는다.
+- Hook 규칙의 오류는 일반적인 실수만 막는다. `h` 없이 `Child()`를 직접 호출하거나, `try/catch`로 Hook 오류를 삼키면 막지 못한다.
+- 렌더 중 `setState` 검사와 effect 횟수 제한은 인스턴스별이다. 두 인스턴스가 서로 `setState`를 부르거나, 비동기 effect가 끝없이 `setState`를 부르면 막지 못한다. effect 안에서 `update()`를 직접 호출하거나 한도 오류를 삼켜도 제한이 풀린다.
+- 실패한 `mount()`를 다시 부르면 이미 만든 칸을 재사용한다. 마운트 전의 `setState`는 마이크로태스크에서 오류가 난다.
+- `onCommit`이 오류를 던지면 `mount()`와 `update()`도 오류를 던진다. 화면은 이미 반영된 뒤이다.
+- `h`는 `props`가 객체인지, deps가 배열인지 검사하지 않는다. `NaN`과 `Infinity`는 문자열이 된다.
 
 ### 페이지 이동
 Phase 1 검증 페이지(`index.html`)와 Phase 2 테스트 페이지(`phase2.html`)는 따로 둔다.

@@ -43,12 +43,16 @@ Batching은 선택 과제이다.
 - Hooks의 핵심 질문은 "함수는 매번 새로 실행되는데, 상태는 어떻게 유지할까?"이다.
 
 ## 6. 미니 리액트와 실제 React의 차이
-아직 구현 전이므로, 과제 요구사항을 기준으로 예상되는 차이를 정리한 것이다.
+구현한 결과를 기준으로 정리한 것이다.
 
 - 과제는 Hook과 State를 루트 컴포넌트에만 두지만, 실제 React는 모든 함수형 컴포넌트가 자기 State를 가질 수 있다.
-- 과제는 `FunctionComponent`의 `hooks` 배열에 상태를 저장하지만, 실제 React는 컴포넌트별 Fiber 노드에 Hook 상태를 저장한다.
-- 실제 React는 Render 단계와 Commit 단계를 나누고, Fiber 구조로 렌더링 작업을 관리한다.
-- 실제 React는 상태 변경을 자동으로 Batching하지만, 과제에서 Batching은 선택 사항이다.
-- 실제 React는 key로 목록의 항목을 구분하지만, key는 과제 문서의 요구사항에 없다.
+- 이 구현은 `FunctionComponent`의 `hooks` 배열에 상태를 저장하지만, 실제 React는 컴포넌트별 Fiber 노드에 Hook 상태를 저장한다.
+- 이 구현은 `h`가 자식 컴포넌트를 바로 실행하므로 Virtual DOM에 태그만 남는다. 실제 React의 요소는 컴포넌트를 `type`으로 가지고, 컴포넌트 경계를 유지한다.
+- 실제 React는 Render 단계와 Commit 단계를 나누고, Fiber 구조로 렌더링 작업을 중단하고 이어 갈 수 있다. 이 구현의 렌더는 한 번에 끝난다.
+- 이 구현은 `queueMicrotask`로 `update()`를 한 번만 예약해 Batching한다. 실제 React도 자동으로 Batching하지만, 우선순위에 따라 일정을 조절한다.
+- 이 구현의 `useEffect`는 `patch` 뒤에 동기로 실행한다. 실제 React는 보통 화면을 그린 뒤에 실행한다.
+- 이 구현은 렌더 중 `setState`를 오류로 막는다. 실제 React는 일부 경우를 허용한다.
+- 이 구현은 이벤트를 `element.onclick` 프로퍼티로 넣는다. 실제 React는 루트에서 이벤트를 위임하고, `onChange`도 입력마다 발생한다.
+- 실제 React는 key로 목록의 항목을 구분하지만, 이 구현은 위치로만 비교한다.
 - 실제 React의 요소는 `children`을 `props` 안에 두고, HTML의 `class`를 `className`으로 쓴다.
 

@@ -107,6 +107,27 @@ describe('setProp', () => {
       expect(element.getAttribute('onclick')).toBe('run()');
     });
 
+    it('on으로 시작하지 않는 이름의 함수는 속성 경로로 간다', () => {
+      const element = document.createElement('div');
+      const fn = () => {};
+
+      setProp(element, 'title', fn);
+
+      expect(element.getAttribute('title')).toBe(String(fn));
+    });
+
+    it('문자열 onclick 속성이 있다가 함수로 바뀌면 속성이 남지 않는다', () => {
+      const element = document.createElement('button');
+      const handler = vi.fn();
+      setProp(element, 'onclick', '__h()');
+
+      setProp(element, 'onclick', handler);
+      element.click();
+
+      expect(element.hasAttribute('onclick')).toBe(false);
+      expect(handler).toHaveBeenCalledOnce();
+    });
+
     it('createDom도 같은 경로로 핸들러를 넣는다', () => {
       const handler = vi.fn();
 
@@ -241,6 +262,27 @@ describe('removeProp', () => {
 
   it('없는 속성을 지워도 오류가 없다', () => {
     expect(() => removeProp(document.createElement('div'), 'id')).not.toThrow();
+  });
+
+  it('input이 아니면 checked 프로퍼티를 만들지 않는다', () => {
+    const element = document.createElement('div');
+    element.setAttribute('checked', '');
+
+    removeProp(element, 'checked');
+
+    expect(Object.hasOwn(element, 'checked')).toBe(false);
+    expect(element.hasAttribute('checked')).toBe(false);
+  });
+
+  it('on으로 시작해도 그 프로퍼티가 없으면 만들지 않는다', () => {
+    const element = document.createElement('div');
+    element.setAttribute('only', 'x');
+
+    removeProp(element, 'only');
+    removeProp(element, 'onFoo');
+
+    expect(Object.hasOwn(element, 'only')).toBe(false);
+    expect(Object.hasOwn(element, 'onfoo')).toBe(false);
   });
 
   it('핸들러를 지운다', () => {

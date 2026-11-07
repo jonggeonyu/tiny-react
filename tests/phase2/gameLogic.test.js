@@ -182,6 +182,12 @@ describe('발표', () => {
   it('점수는 실력 + 완성 수 x 8', () => {
     expect(finishPresentation(pres(20, 2)).score).toBe(36);
   });
+  it('presentation이 아니면 finishPresentation은 입력을 그대로 돌려준다', () => {
+    const g = play({ turn: 3 });
+    const ended = finishPresentation(pres(20, 2));
+    expect(finishPresentation(g)).toBe(g);
+    expect(finishPresentation(ended)).toBe(ended);
+  });
   it('입력을 바꾸지 않는다', () => {
     const g = pres(20, 2);
     finishPresentation(g);

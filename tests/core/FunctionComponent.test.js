@@ -234,6 +234,27 @@ describe('FunctionComponent', () => {
     expect(app.hooks).toHaveLength(1);
   });
 
+  it('renderRoot가 실패하면 vdom이 null로 남는다', () => {
+    const container = document.createElement('div');
+    const app = new FunctionComponent(() => h('div', { 'bad name': 'x' }), container);
+
+    expect(() => app.mount()).toThrow();
+    expect(app.vdom).toBeNull();
+  });
+
+  it('렌더 중 함수형 setState의 updater는 실행되지 않는다', () => {
+    const updater = vi.fn((n) => n + 1);
+    function App() {
+      const [, setCount] = useState(0);
+      expect(() => setCount(updater)).toThrow('렌더 중');
+      return null;
+    }
+
+    mountApp(App);
+
+    expect(updater).not.toHaveBeenCalled();
+  });
+
   it('두 번째 mount()는 오류이다', () => {
     const component = vi.fn(() => h('p', null, '글'));
     const { app, container } = mountApp(component);
@@ -609,6 +630,24 @@ describe('onCommit', () => {
     onCommit.mockClear();
     failRender = true;
     expect(() => app.update()).toThrow('렌더 실패');
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it('patch가 실패하면 호출하지 않는다', () => {
+    const onCommit = vi.fn();
+    let setCount;
+    function App() {
+      const [count, set] = useState(0);
+      setCount = set;
+      return h('div', null, h('span', count === 1 ? { 'bad name': 'x' } : null, '끝'));
+    }
+    const app = new FunctionComponent(App, document.createElement('div'), { onCommit });
+    app.mount();
+    onCommit.mockClear();
+
+    setCount(1);
+    expect(() => app.update()).toThrow();
+
     expect(onCommit).not.toHaveBeenCalled();
   });
 

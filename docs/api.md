@@ -454,10 +454,7 @@ History와 번호를 맞춘 Patch 설명 목록이다. 첫 항목은 초기 상�
 <a name="setProp"></a>
 
 ## setProp(element, name, value) ⇒ <code>void</code>
-속성 하나를 실제 DOM에 넣는다.
-`createDom`과 `patch`가 이 함수를 함께 써서 속성을 넣는 경로를 하나로 유지한다.
-`on`으로 시작하는 이름의 함수는 이벤트 핸들러 프로퍼티에 대입하므로 이전 핸들러를 교체하고 속성에 나타나지 않는다.
-`input`과 `textarea`의 `value`, `input`의 `checked`는 속성과 프로퍼티를 함께 맞춘다.
+속성 하나를 실제 DOM에 넣는다.`createDom`과 `patch`가 이 함수를 함께 써서 속성을 넣는 경로를 하나로 유지한다.`on`으로 시작하는 이름의 함수는 이벤트 핸들러 프로퍼티에 대입하므로 이전 핸들러를 교체하고 속성에 나타나지 않는다.`input`과 `textarea`의 `value`, `input`의 `checked`는 속성과 프로퍼티를 함께 맞춘다.
 
 **Kind**: global function  
 **Throws**:
@@ -474,8 +471,7 @@ History와 번호를 맞춘 Patch 설명 목록이다. 첫 항목은 초기 상�
 <a name="removeProp"></a>
 
 ## removeProp(element, name) ⇒ <code>void</code>
-속성 하나를 실제 DOM에서 지운다.
-이벤트 핸들러와 `checked`, `value` 프로퍼티는 속성을 지워도 남으므로 함께 되돌린다.
+속성 하나를 실제 DOM에서 지운다.이벤트 핸들러와 `checked`, `value` 프로퍼티는 속성을 지워도 남으므로 함께 되돌린다.
 
 **Kind**: global function  
 
@@ -487,8 +483,7 @@ History와 번호를 맞춘 Patch 설명 목록이다. 첫 항목은 초기 상�
 <a name="createDom"></a>
 
 ## createDom(vnode) ⇒ <code>Text</code> \| <code>Element</code>
-Virtual DOM을 실제 DOM으로 변환한다.
-문자열은 텍스트 노드가 되고, 요소는 `props`와 `children`까지 재귀로 만든다.
+Virtual DOM을 실제 DOM으로 변환한다.문자열은 텍스트 노드가 되고, 요소는 `props`와 `children`까지 재귀로 만든다.
 
 **Kind**: global function  
 **Returns**: <code>Text</code> \| <code>Element</code> - 새로 만든 DOM 노드  
@@ -504,9 +499,7 @@ Virtual DOM을 실제 DOM으로 변환한다.
 <a name="renderRoot"></a>
 
 ## renderRoot(container, root) ⇒ <code>void</code>
-루트 Virtual DOM으로 영역의 내용을 다시 그린다.
-새 노드를 `DocumentFragment`에 모두 만든 뒤 한 번에 교체한다.
-영역 자체의 태그와 속성은 바꾸지 않는다.
+루트 Virtual DOM으로 영역의 내용을 다시 그린다.새 노드를 `DocumentFragment`에 모두 만든 뒤 한 번에 교체한다.영역 자체의 태그와 속성은 바꾸지 않는다.
 
 **Kind**: global function  
 **Throws**:

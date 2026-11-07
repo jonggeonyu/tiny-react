@@ -24,6 +24,8 @@ function hasValueProperty(element) {
  */
 export function setProp(element, name, value) {
   if (typeof value === 'function' && name.startsWith('on')) {
+    // 같은 이름의 문자열 속성이 남으면 안 되므로 지운다.
+    element.removeAttribute(name);
     element[name.toLowerCase()] = value;
     return;
   }
@@ -50,11 +52,11 @@ export function setProp(element, name, value) {
  * @returns {void}
  */
 export function removeProp(element, name) {
-  if (name.startsWith('on')) {
+  if (name.startsWith('on') && name.toLowerCase() in element) {
     element[name.toLowerCase()] = null;
   }
 
-  if (name === 'checked') {
+  if (name === 'checked' && element.tagName === 'INPUT') {
     element.checked = false;
   }
 
