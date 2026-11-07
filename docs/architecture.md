@@ -41,7 +41,7 @@ src/
     ├── formatHtml.js      textarea에 넣을 HTML 정렬
     ├── main.js            페이지 로드와 버튼 핸들러
     └── style.css
-tests/                     src/의 파일별 단위 테스트
+tests/                     src/의 모듈별 단위 테스트
 └── e2e/                   브라우저 기능 테스트
 ```
 
@@ -434,12 +434,12 @@ effect 안에서 DOM을 읽을 수 있어야 하므로 실행은 `patch` 뒤에 
 ### 속성과 이벤트
 `setProp(element, name, value)`는 다음 순서로 동작한다.
 
-1. 값이 함수이고 이름이 `on`으로 시작하면 `element[소문자 이름] = value`를 하고 끝낸다.
+1. 값이 함수이고 이름이 `on`으로 시작하면 같은 이름의 속성을 지우고 `element[소문자 이름] = value`를 한 뒤 끝낸다.
 2. `setAttribute`로 속성을 넣는다.
 3. `input`과 `textarea`의 `value`는 프로퍼티와 값이 다를 때 프로퍼티도 맞춘다. `file` 타입은 제외한다.
 4. `input`의 `checked`는 프로퍼티를 `true`로 맞춘다.
 
-`removeProp(element, name)`은 `on`으로 시작하는 이름은 프로퍼티를 `null`로, `checked`는 `false`로, `input`과 `textarea`의 `value`는 `''`로 되돌린 뒤 `removeAttribute`를 부른다. `file` 타입의 `value`는 건드리지 않는다.
+`removeProp(element, name)`은 `on`으로 시작하는 이름은 요소에 그 프로퍼티가 있을 때 `null`로, `input`의 `checked`는 `false`로, `input`과 `textarea`의 `value`는 `''`로 되돌린 뒤 `removeAttribute`를 부른다. `file` 타입의 `value`는 건드리지 않는다.
 `removeAttribute`를 마지막에 부르는 이유: `checkbox`, `radio`, `hidden`, 버튼 종류의 `input`은 `value` 대입이 속성에 쓰이므로, 먼저 지우면 지운 속성이 `value=""`로 되살아난다.
 `patch`의 `PROPS`는 `removeAttribute` 대신 이 함수를 부른다. `remove`를 먼저 적용하는 순서는 그대로이다.
 
@@ -519,7 +519,7 @@ Phase 1처럼 `DESIGN.md`의 시각 언어를 따른다. 페이지 주소는 `/p
 
 1. 코치 순찰: 의심도가 40 이상이면 의심도 %의 확률로 걸린다. 실력 -5, 멘탈 -15, 의심도 -20이다.
 2. 회식: 밤 턴이 끝나면 30% 확률로 열린다. 한 판에 한 번만 열린다. 선택지는 참석과 불참이고 제한 시간은 같다. 시간이 지나면 불참이다.
-   - 참석: 멘탈 +20, 다음 날 숙취로 체력 -15
+   - 참석: 멘탈 +20, 체력 -15. 회식은 밤이 끝날 때 열리므로 숙취는 답하는 즉시 적용해도 다음 날이다.
    - 불참: 실력 +5, 멘탈 -5
 
 **엔딩**은 앞의 조건이 먼저이다.
@@ -549,7 +549,7 @@ Phase 1처럼 `DESIGN.md`의 시각 언어를 따른다. 페이지 주소는 `/p
 | Hook | 쓰임 |
 |---|---|
 | `useState` | `name`, `game`(턴 진행 전체), `timeLeft`, `typed`, `bestScore` |
-| `useEffect` | 1초 타이머와 cleanup, 시간 초과 처리, 입력창 포커스, 최고 기록 읽기와 저장 |
+| `useEffect` | 1초 타이머와 cleanup, 시간 초과 처리, 입력창 포커스, 최고 기록 읽기와 저장, 사건 기록 스크롤 |
 | `useMemo` | 칭호, 발표 글자별 판정 |
 
 확률 판정은 렌더가 아니라 클릭 핸들러와 시간 초과 처리에서 한다. 렌더 중에 난수를 쓰면 같은 상태에서 화면이 달라진다.

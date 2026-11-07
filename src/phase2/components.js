@@ -63,10 +63,12 @@ export function EventLog({ log }) {
  * @returns {Object} Virtual DOM
  */
 export function PlayScreen({ game, title, timeLeft, onChoose, onDinner }) {
-  const day = Math.floor(game.turn / 3) + 1;
   const dinner = game.event === 'dinner';
+  // 회식은 선택 직후에 생기고 turn은 이미 올라가 있으므로 방금 지난 턴을 보여 준다.
+  const shownTurn = dinner ? game.turn - 1 : game.turn;
+  const day = Math.floor(shownTurn / 3) + 1;
   return h('div', { class: 'play-screen' },
-    h('h2', null, `${day}일차 ${PERIODS[game.turn % 3]}`),
+    h('h2', null, `${day}일차 ${PERIODS[shownTurn % 3]}`),
     h('div', { class: 'timer' }, `남은 시간 ${timeLeft}초`),
     h(StatBar, { stats: game.stats, title }),
     dinner
@@ -82,7 +84,7 @@ export function PlayScreen({ game, title, timeLeft, onChoose, onDinner }) {
 
 /**
  * 발표 타자 화면. 입력창은 글자 영역의 형제이고, 안내는 입력창 뒤에 두어서 입력창 위치가 바뀌지 않는다.
- * @param {{letters: Array<{char: string, status: string}>, typed: string, timeLeft: number, done: number, total: number, showHint: boolean, onType: function(string): void}} props
+ * @param {{letters: Array<{char: string, status: string}>, typed: string, timeLeft: number, done: number, total: number, showHint: boolean, onType: function(string, Element): void}} props
  * @returns {Object} Virtual DOM
  */
 export function PresentationScreen({ letters, typed, timeLeft, done, total, showHint, onType }) {
@@ -93,7 +95,7 @@ export function PresentationScreen({ letters, typed, timeLeft, done, total, show
       ...letters.map(({ char, status }) => h('span', { class: `char-${status}` }, char))),
     h('input', {
       class: 'typing-input', type: 'text', value: typed, 'aria-label': '함수 이름 입력',
-      autocomplete: 'off', spellcheck: 'false', onInput: (event) => onType(event.target.value),
+      autocomplete: 'off', spellcheck: 'false', onInput: (event) => onType(event.target.value, event.target),
     }),
     showHint ? h('p', { class: 'typing-hint' }, '한/영 키를 눌러 영어로 입력하세요.') : null,
   );
@@ -109,7 +111,7 @@ export function EndingScreen({ game, name, bestScore, onRestart }) {
     h('h2', null, ENDINGS[game.ending].title),
     h('p', null, `${name}님, ${ENDINGS[game.ending].text}`),
     game.score === null ? null : h('p', { class: 'score' }, `발표 점수: ${game.score}점`),
-    h('p', { class: 'best-score' }, `최고 기록: ${bestScore}점`),
+    h('p', { class: 'best-score' }, bestScore > 0 ? `최고 기록: ${bestScore}점` : '최고 기록: 없음'),
     h(EventLog, { log: game.log }),
     h('button', { class: 'primary', onClick: onRestart }, '다시 하기'),
   );

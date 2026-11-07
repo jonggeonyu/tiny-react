@@ -113,6 +113,7 @@ describe('선택과 타이머', () => {
     await startAs();
     await choose('코딩', '코딩', '코딩');
     expect(container.textContent).toContain('회식 참석');
+    expect(container.querySelector('h2').textContent).toBe('1일차 밤');
     expect(vi.getTimerCount()).toBe(1);
     await tick(20000);
     expect(container.textContent).not.toContain('회식 참석');
@@ -149,6 +150,14 @@ describe('발표', () => {
     // 이름이 바뀌어도 타이머를 다시 시작하지 않고 하나만 돈다. (jsdom의 focus가 타이머를 하나 더 만들어서 개수 대신 시간으로 확인한다.)
     await tick(3000);
     expect(timerText()).toContain('17');
+  });
+
+  it('함수 이름 전체를 한 번에 붙여넣어도 입력창이 비워진다', async () => {
+    mountGame();
+    await reachPresentation();
+    await typeInto('.typing-input', 'useState');
+    expect(container.querySelector('.typing-input').value).toBe('');
+    expect(container.querySelector('.target-name').textContent).toBe('useEffect');
   });
 
   it('발표의 20초는 다섯 이름 전체의 시간이라 입력과 완성으로 되돌아가지 않는다', async () => {

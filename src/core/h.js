@@ -31,7 +31,12 @@ export function normalizeChildren(children) {
   return result;
 }
 
-/** 속성 값을 정규화한다. 버릴 값은 객체에 넣지 않는다. */
+/**
+ * 속성 값을 정규화한다. 버릴 값은 객체에 넣지 않는다.
+ * @private
+ * @param {Object} props
+ * @returns {Object}
+ */
 function normalizeProps(props) {
   const result = {};
 

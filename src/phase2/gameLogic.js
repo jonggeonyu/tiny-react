@@ -6,6 +6,7 @@ import {
 
 /**
  * 스탯에 변화량을 더하고 0~100으로 제한한 새 객체를 돌려준다.
+ * @private
  * @param {Object} stats
  * @param {Object} effect
  * @returns {Object}
@@ -20,6 +21,7 @@ function applyEffect(stats, effect) {
 
 /**
  * 사건 판정 뒤의 엔딩을 확인한다. 앞의 조건이 먼저이다.
+ * @private
  * @param {Object} game
  * @returns {Object} 엔딩이면 phase가 'ending'인 새 게임, 아니면 입력 그대로
  */
@@ -35,6 +37,7 @@ function checkEnding(game) {
 
 /**
  * 엔딩이 아니면 다음 단계(발표)로 넘긴다.
+ * @private
  * @param {Object} game
  * @returns {Object}
  */
@@ -66,7 +69,7 @@ export function startGame(game) {
 }
 
 /**
- * 선택 하나를 적용하고 순찰, 회식, 엔딩 순서로 판정한다.
+ * 선택 하나를 적용하고 순찰, 엔딩, 회식 순서로 판정한다.
  * `random`은 0 이상 1 미만의 수를 돌려주는 함수이다.
  * @param {Object} game
  * @param {string} choiceId coding, smoke, sneak, home, idle 중 하나

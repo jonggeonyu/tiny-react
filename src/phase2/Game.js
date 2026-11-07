@@ -9,7 +9,11 @@ import { StartScreen, PlayScreen, PresentationScreen, EndingScreen } from './com
 const TIME_LIMIT = 20;
 const STORAGE_KEY = 'tiny-react-best-score';
 
-/** 최고 기록을 읽는다. 저장소를 쓸 수 없으면 0이다. */
+/**
+ * 최고 기록을 읽는다. 저장소를 쓸 수 없으면 0이다.
+ * @private
+ * @returns {number}
+ */
 function readBestScore() {
   try {
     const value = Number(localStorage.getItem(STORAGE_KEY));
@@ -19,7 +23,11 @@ function readBestScore() {
   }
 }
 
-/** 최고 기록을 저장한다. 저장소를 쓸 수 없으면 무시한다. */
+/**
+ * 최고 기록을 저장한다. 저장소를 쓸 수 없으면 무시한다.
+ * @private
+ * @param {number} score
+ */
 function writeBestScore(score) {
   try {
     localStorage.setItem(STORAGE_KEY, String(score));
@@ -77,6 +85,12 @@ export function Game() {
     if (input) input.focus();
   }, [game.phase]);
 
+  // 기록이 늘면 최신 줄이 보이도록 기록 영역을 맨 아래로 스크롤한다.
+  useEffect(() => {
+    const log = document.querySelector('.event-log');
+    if (log) log.scrollTop = log.scrollHeight;
+  }, [game.log.length]);
+
   const title = useMemo(() => getTitle(game.stats), [game.stats]);
   const target = TARGETS[Math.min(game.targetIndex, TARGETS.length - 1)];
   const letters = useMemo(() => judgeTyping(target, typed), [target, typed]);
@@ -90,10 +104,12 @@ export function Game() {
     setGame((current) => answerDinner(current, attends));
     setTimeLeft(TIME_LIMIT);
   };
-  const type = (value) => {
+  const type = (value, input) => {
     if (value === target) {
       setGame((current) => completeTarget(current));
       setTyped('');
+      // typed가 이미 ''이면 diff가 없어 입력창이 남으므로 직접 비운다.
+      input.value = '';
     } else {
       setTyped(value);
     }

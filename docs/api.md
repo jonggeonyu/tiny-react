@@ -95,9 +95,6 @@ Virtual DOM은 만든 뒤 수정하지 않는 값이므로 복사하지 않고 �
 문자열과 요소는 그대로 두고, 숫자는 문자열로 바꾸며, <code>null</code>, <code>undefined</code>, <code>true</code>, <code>false</code>는 버린다.
 배열은 재귀로 펼치고, 나란한 문자열은 합치지 않는다.</p>
 </dd>
-<dt><a href="#normalizeProps">normalizeProps()</a></dt>
-<dd><p>속성 값을 정규화한다. 버릴 값은 객체에 넣지 않는다.</p>
-</dd>
 <dt><a href="#h">h(type, props, ...children)</a> ⇒ <code><a href="#VNode">VNode</a></code> | <code>*</code></dt>
 <dd><p>Virtual DOM 노드를 만든다. JSX 대신 쓴다.
 <code>type</code>이 함수이면 <code>type({ ...props, children })</code>을 바로 호출해 결과를 돌려준다.
@@ -178,24 +175,9 @@ deps가 같으면 <code>compute</code>를 실행하지 않고 저장한 값을 �
 <dt><a href="#EndingScreen">EndingScreen(props)</a> ⇒ <code>Object</code></dt>
 <dd><p>엔딩 화면.</p>
 </dd>
-<dt><a href="#readBestScore">readBestScore()</a></dt>
-<dd><p>최고 기록을 읽는다. 저장소를 쓸 수 없으면 0이다.</p>
-</dd>
-<dt><a href="#writeBestScore">writeBestScore()</a></dt>
-<dd><p>최고 기록을 저장한다. 저장소를 쓸 수 없으면 무시한다.</p>
-</dd>
 <dt><a href="#Game">Game()</a> ⇒ <code>Object</code></dt>
 <dd><p>정글 생존기의 루트 컴포넌트. Hook을 쓰는 유일한 컴포넌트이고, 자식은 Props만 받는다.
 난수는 핸들러와 시간 초과 처리에서만 <code>Math.random</code>으로 만든다.</p>
-</dd>
-<dt><a href="#applyEffect">applyEffect(stats, effect)</a> ⇒ <code>Object</code></dt>
-<dd><p>스탯에 변화량을 더하고 0~100으로 제한한 새 객체를 돌려준다.</p>
-</dd>
-<dt><a href="#checkEnding">checkEnding(game)</a> ⇒ <code>Object</code></dt>
-<dd><p>사건 판정 뒤의 엔딩을 확인한다. 앞의 조건이 먼저이다.</p>
-</dd>
-<dt><a href="#advance">advance(game)</a> ⇒ <code>Object</code></dt>
-<dd><p>엔딩이 아니면 다음 단계(발표)로 넘긴다.</p>
 </dd>
 <dt><a href="#createGame">createGame()</a> ⇒ <code>Object</code></dt>
 <dd><p>처음 상태의 게임을 만든다. <code>다시 하기</code>에도 쓴다.</p>
@@ -204,7 +186,7 @@ deps가 같으면 <code>compute</code>를 실행하지 않고 저장한 값을 �
 <dd><p>게임을 시작한다.</p>
 </dd>
 <dt><a href="#playTurn">playTurn(game, choiceId, random)</a> ⇒ <code>Object</code></dt>
-<dd><p>선택 하나를 적용하고 순찰, 회식, 엔딩 순서로 판정한다.
+<dd><p>선택 하나를 적용하고 순찰, 엔딩, 회식 순서로 판정한다.
 <code>random</code>은 0 이상 1 미만의 수를 돌려주는 함수이다.</p>
 </dd>
 <dt><a href="#answerDinner">answerDinner(game, attends)</a> ⇒ <code>Object</code></dt>
@@ -574,9 +556,7 @@ DOM 노드 하나를 Virtual DOM으로 변환한다.
 <a name="normalizeChildren"></a>
 
 ## normalizeChildren(children) ⇒ [<code>Array.&lt;VNode&gt;</code>](#VNode)
-자식 목록을 Virtual DOM 자식 배열로 정리한다.
-문자열과 요소는 그대로 두고, 숫자는 문자열로 바꾸며, `null`, `undefined`, `true`, `false`는 버린다.
-배열은 재귀로 펼치고, 나란한 문자열은 합치지 않는다.
+자식 목록을 Virtual DOM 자식 배열로 정리한다.문자열과 요소는 그대로 두고, 숫자는 문자열로 바꾸며, `null`, `undefined`, `true`, `false`는 버린다.배열은 재귀로 펼치고, 나란한 문자열은 합치지 않는다.
 
 **Kind**: global function  
 **Returns**: [<code>Array.&lt;VNode&gt;</code>](#VNode) - 문자열과 요소만 담긴 배열  
@@ -589,19 +569,10 @@ DOM 노드 하나를 Virtual DOM으로 변환한다.
 | --- | --- | --- |
 | children | <code>Array.&lt;\*&gt;</code> | 정리할 자식 목록 |
 
-<a name="normalizeProps"></a>
-
-## normalizeProps()
-속성 값을 정규화한다. 버릴 값은 객체에 넣지 않는다.
-
-**Kind**: global function  
 <a name="h"></a>
 
 ## h(type, props, ...children) ⇒ [<code>VNode</code>](#VNode) \| <code>\*</code>
-Virtual DOM 노드를 만든다. JSX 대신 쓴다.
-`type`이 함수이면 `type({ ...props, children })`을 바로 호출해 결과를 돌려준다.
-이때 `props`는 정규화하지 않고 `children`만 정규화한다.
-자식 컴포넌트를 실행하는 동안에는 Hook을 쓸 수 없다.
+Virtual DOM 노드를 만든다. JSX 대신 쓴다.`type`이 함수이면 `type({ ...props, children })`을 바로 호출해 결과를 돌려준다.이때 `props`는 정규화하지 않고 `children`만 정규화한다.자식 컴포넌트를 실행하는 동안에는 Hook을 쓸 수 없다.
 
 **Kind**: global function  
 **Returns**: [<code>VNode</code>](#VNode) \| <code>\*</code> - 문자열 `type`이면 `{ type, props, children }`, 함수 `type`이면 그 함수의 반환값  
@@ -864,61 +835,13 @@ HTML 문자열을 루트 Virtual DOM으로 바꾼다.
 | --- | --- |
 | props | <code>Object</code> | 
 
-<a name="readBestScore"></a>
-
-## readBestScore()
-최고 기록을 읽는다. 저장소를 쓸 수 없으면 0이다.
-
-**Kind**: global function  
-<a name="writeBestScore"></a>
-
-## writeBestScore()
-최고 기록을 저장한다. 저장소를 쓸 수 없으면 무시한다.
-
-**Kind**: global function  
 <a name="Game"></a>
 
 ## Game() ⇒ <code>Object</code>
-정글 생존기의 루트 컴포넌트. Hook을 쓰는 유일한 컴포넌트이고, 자식은 Props만 받는다.
-난수는 핸들러와 시간 초과 처리에서만 `Math.random`으로 만든다.
+정글 생존기의 루트 컴포넌트. Hook을 쓰는 유일한 컴포넌트이고, 자식은 Props만 받는다.난수는 핸들러와 시간 초과 처리에서만 `Math.random`으로 만든다.
 
 **Kind**: global function  
 **Returns**: <code>Object</code> - Virtual DOM  
-<a name="applyEffect"></a>
-
-## applyEffect(stats, effect) ⇒ <code>Object</code>
-스탯에 변화량을 더하고 0~100으로 제한한 새 객체를 돌려준다.
-
-**Kind**: global function  
-
-| Param | Type |
-| --- | --- |
-| stats | <code>Object</code> | 
-| effect | <code>Object</code> | 
-
-<a name="checkEnding"></a>
-
-## checkEnding(game) ⇒ <code>Object</code>
-사건 판정 뒤의 엔딩을 확인한다. 앞의 조건이 먼저이다.
-
-**Kind**: global function  
-**Returns**: <code>Object</code> - 엔딩이면 phase가 'ending'인 새 게임, 아니면 입력 그대로  
-
-| Param | Type |
-| --- | --- |
-| game | <code>Object</code> | 
-
-<a name="advance"></a>
-
-## advance(game) ⇒ <code>Object</code>
-엔딩이 아니면 다음 단계(발표)로 넘긴다.
-
-**Kind**: global function  
-
-| Param | Type |
-| --- | --- |
-| game | <code>Object</code> | 
-
 <a name="createGame"></a>
 
 ## createGame() ⇒ <code>Object</code>
@@ -941,7 +864,7 @@ HTML 문자열을 루트 Virtual DOM으로 바꾼다.
 <a name="playTurn"></a>
 
 ## playTurn(game, choiceId, random) ⇒ <code>Object</code>
-선택 하나를 적용하고 순찰, 회식, 엔딩 순서로 판정한다.`random`은 0 이상 1 미만의 수를 돌려주는 함수이다.
+선택 하나를 적용하고 순찰, 엔딩, 회식 순서로 판정한다.`random`은 0 이상 1 미만의 수를 돌려주는 함수이다.
 
 **Kind**: global function  
 **Returns**: <code>Object</code> - 새 게임. play가 아니거나 회식 중이면 입력 그대로이다.  

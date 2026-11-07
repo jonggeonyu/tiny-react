@@ -645,8 +645,12 @@ describe('onCommit', () => {
     app.mount();
     onCommit.mockClear();
 
+    // 마이크로태스크의 오류는 받아 줄 곳이 없으므로 예약된 함수를 직접 실행한다.
+    const tasks = [];
+    const spy = vi.spyOn(globalThis, 'queueMicrotask').mockImplementation((task) => tasks.push(task));
     setCount(1);
-    expect(() => app.update()).toThrow();
+    spy.mockRestore();
+    expect(() => tasks[0]()).toThrow();
 
     expect(onCommit).not.toHaveBeenCalled();
   });
