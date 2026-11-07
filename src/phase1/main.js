@@ -3,7 +3,7 @@ import { diff } from '../core/diff.js';
 import { containerToVdom } from '../core/domToVdom.js';
 import { htmlToVdom } from '../core/html.js';
 import { patch } from '../core/patch.js';
-import { describeChanges } from './describeChanges.js';
+import { describeChanges } from '../core/describeChanges.js';
 import { formatHtml } from './formatHtml.js';
 import { StateHistory } from './StateHistory.js';
 

@@ -34,11 +34,11 @@ src/
 │   ├── createDom.js       createDom, renderRoot, setProp
 │   ├── html.js            vdomToHtml, htmlToVdom
 │   ├── diff.js
-│   └── patch.js
+│   ├── patch.js
+│   └── describeChanges.js 변경 목록을 한 줄 설명으로 변환
 └── phase1/                Phase 1 페이지 전용 코드
     ├── StateHistory.js
     ├── formatHtml.js      textarea에 넣을 HTML 정렬
-    ├── describeChanges.js 변경 목록을 한 줄 설명으로 변환
     ├── main.js            페이지 로드와 버튼 핸들러
     └── style.css
 tests/                     src/의 파일별 단위 테스트

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeChanges } from '../../src/phase1/describeChanges.js';
+import { describeChanges } from '../../src/core/describeChanges.js';
 
 const el = (type) => ({ type, props: {}, children: [] });
 const removes = (count) => Array.from({ length: count }, (_, i) => ({ kind: 'REMOVE', path: [i] }));

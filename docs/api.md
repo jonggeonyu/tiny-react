@@ -42,6 +42,9 @@ Virtual DOM은 만든 뒤 수정하지 않는 값이므로 복사하지 않고 �
 새 노드를 <code>DocumentFragment</code>에 모두 만든 뒤 한 번에 교체한다.
 영역 자체의 태그와 속성은 바꾸지 않는다.</p>
 </dd>
+<dt><a href="#describeChanges">describeChanges(changes)</a> ⇒ <code>string</code></dt>
+<dd><p>변경 목록을 한 줄 문자열로 바꾼다. 4개가 넘으면 앞의 3개 뒤에 <code>외 N개</code>를 붙인다.</p>
+</dd>
 <dt><a href="#diff">diff(oldVdom, newVdom)</a> ⇒ <code><a href="#Change">Array.&lt;Change&gt;</a></code></dt>
 <dd><p>두 Virtual DOM을 비교해 변경 목록을 돌려준다. 실제 DOM과 입력은 건드리지 않는다.
 자식은 번호로만 비교하므로 추가와 삭제는 항상 자식 목록의 끝에서 일어나고, 목록을 순서대로 적용하면 앞쪽 번호가 밀리지 않는다.
@@ -117,9 +120,6 @@ deps가 같으면 <code>compute</code>를 실행하지 않고 저장한 값을 �
 <code>changes</code>는 <code>container</code>의 내용을 나타내는 루트 Virtual DOM과 새 루트를 <code>diff</code>로 비교한 결과여야 한다.
 <code>path</code>가 맞으려면 <code>container</code>의 <code>childNodes</code>와 이전 Virtual DOM의 <code>children</code>이 번호까지 일치해야 한다.</p>
 </dd>
-<dt><a href="#describeChanges">describeChanges(changes)</a> ⇒ <code>string</code></dt>
-<dd><p>변경 목록을 한 줄 문자열로 바꾼다. 4개가 넘으면 앞의 3개 뒤에 <code>외 N개</code>를 붙인다.</p>
-</dd>
 <dt><a href="#formatHtml">formatHtml(root)</a> ⇒ <code>string</code></dt>
 <dd><p>루트 Virtual DOM을 줄바꿈과 2칸 들여쓰기를 맞춘 HTML 문자열로 바꾼다.
 자식이 모두 요소일 때만 줄을 나눠서, 결과를 <code>htmlToVdom</code>으로 다시 읽으면 같은 Virtual DOM이 된다.
@@ -167,7 +167,7 @@ deps가 같으면 <code>compute</code>를 실행하지 않고 저장한 값을 �
 | component | <code>function</code> | 루트 컴포넌트 함수. `{}`를 받아 화면 내용을 돌려준다. |
 | container | <code>Element</code> | 화면을 그릴 영역. 영역의 내용만 바뀌고 영역 자체는 그대로이다. |
 | [options] | <code>object</code> | 선택 값 |
-| [options.onCommit] | <code>function</code> | 화면 반영 뒤에 쓸 함수. 지금은 저장만 하고 호출하지 않는다. |
+| [options.onCommit] | <code>function</code> | `mount()`와 `update()`가 effect까지 성공한 뒤 변경 목록을 받아 호출하는 함수. `mount()`는 빈 배열을 넘긴다. 렌더나 effect가 실패하면 호출하지 않는다. |
 
 <a name="FunctionComponent+mount"></a>
 
@@ -175,6 +175,7 @@ deps가 같으면 <code>compute</code>를 실행하지 않고 저장한 값을 �
 처음 렌더해서 영역의 내용을 그린 뒤 effect를 실행한다.
 렌더나 그리기가 실패하면 마운트되지 않은 상태로 남고 영역의 내용은 그대로이다.
 effect가 실패하면 오류를 던지지만 마운트는 끝난 상태이다.
+성공하면 effect 뒤에 `onCommit([])`을 호출한다. effect가 실패하면 호출하지 않는다.
 
 **Kind**: instance method of [<code>FunctionComponent</code>](#FunctionComponent)  
 **Throws**:
@@ -190,6 +191,7 @@ effect가 실패하면 오류를 던지지만 마운트는 끝난 상태이다.
 `patch`가 실패하면 이전 `vdom`으로 영역을 다시 그리고, `vdom`은 갱신하지 않는다.
 렌더나 `patch`가 실패하면 effect를 실행하지 않고 `isStale`이 `true`가 되고, 성공하면 `false`가 된다.
 effect의 실패는 렌더 실패가 아니므로 오류만 던지고 `isStale`은 바꾸지 않는다.
+성공하면 effect 뒤에 `onCommit(changes)`를 호출한다. effect가 실패하면 호출하지 않는다.
 
 **Kind**: instance method of [<code>FunctionComponent</code>](#FunctionComponent)  
 **Throws**:
@@ -346,6 +348,18 @@ Virtual DOM을 실제 DOM으로 변환한다.
 | --- | --- | --- |
 | container | <code>Element</code> | 다시 그릴 영역 |
 | root | [<code>VElement</code>](#VElement) | `type`이 `'root'`인 루트 노드 |
+
+<a name="describeChanges"></a>
+
+## describeChanges(changes) ⇒ <code>string</code>
+변경 목록을 한 줄 문자열로 바꾼다. 4개가 넘으면 앞의 3개 뒤에 `외 N개`를 붙인다.
+
+**Kind**: global function  
+**Returns**: <code>string</code> - 쉼표로 이은 설명  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| changes | [<code>Array.&lt;Change&gt;</code>](#Change) | `diff`가 돌려준 변경 목록 |
 
 <a name="diff"></a>
 
@@ -581,18 +595,6 @@ HTML 문자열을 루트 Virtual DOM으로 바꾼다.
 | Param | Type | Description |
 | --- | --- | --- |
 | container | <code>Element</code> | 변경을 적용할 영역 |
-| changes | [<code>Array.&lt;Change&gt;</code>](#Change) | `diff`가 돌려준 변경 목록 |
-
-<a name="describeChanges"></a>
-
-## describeChanges(changes) ⇒ <code>string</code>
-변경 목록을 한 줄 문자열로 바꾼다. 4개가 넘으면 앞의 3개 뒤에 `외 N개`를 붙인다.
-
-**Kind**: global function  
-**Returns**: <code>string</code> - 쉼표로 이은 설명  
-
-| Param | Type | Description |
-| --- | --- | --- |
 | changes | [<code>Array.&lt;Change&gt;</code>](#Change) | `diff`가 돌려준 변경 목록 |
 
 <a name="formatHtml"></a>

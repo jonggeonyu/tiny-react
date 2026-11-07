@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { FunctionComponent } from '../../src/core/FunctionComponent.js';
 import { h } from '../../src/core/h.js';
-import { useState } from '../../src/core/hooks.js';
+import { useEffect, useState } from '../../src/core/hooks.js';
 
 /** 컴포넌트를 새 영역에 마운트하고 인스턴스와 영역을 돌려준다. */
 function mountApp(component) {
@@ -544,5 +544,80 @@ describe('FunctionComponent', () => {
       expect(() => app.update()).toThrow('마운트');
       expect(app.isStale).toBe(false);
     });
+  });
+});
+
+describe('onCommit', () => {
+  it('mount()는 effect 뒤에 빈 배열로 호출한다', () => {
+    const order = [];
+    const onCommit = vi.fn((changes) => order.push(['commit', changes]));
+    function App() {
+      useEffect(() => {
+        order.push('effect');
+      }, []);
+      return h('p', null, 'a');
+    }
+
+    new FunctionComponent(App, document.createElement('div'), { onCommit }).mount();
+
+    expect(order).toEqual(['effect', ['commit', []]]);
+  });
+
+  it('update()는 effect 뒤에 변경 목록으로 호출한다', () => {
+    const order = [];
+    let n = 0;
+    const onCommit = vi.fn((changes) => order.push(['commit', changes]));
+    function App() {
+      useEffect(() => {
+        order.push('effect');
+      });
+      return h('p', null, n);
+    }
+    const app = new FunctionComponent(App, document.createElement('div'), { onCommit });
+    app.mount();
+    order.length = 0;
+
+    n = 1;
+    app.update();
+
+    expect(order[0]).toBe('effect');
+    expect(order[1][0]).toBe('commit');
+    expect(order[1][1]).toHaveLength(1);
+    expect(order[1][1][0].kind).toBe('TEXT');
+    expect(onCommit).toHaveBeenCalledTimes(2);
+  });
+
+  it('렌더나 effect가 실패하면 호출하지 않는다', () => {
+    const onCommit = vi.fn();
+    let failRender = false;
+    let failEffect = true;
+    function App() {
+      if (failRender) throw new Error('렌더 실패');
+      useEffect(() => {
+        if (failEffect) throw new Error('effect 실패');
+      });
+      return h('p', null, String(failRender));
+    }
+    const bad = new FunctionComponent(App, document.createElement('div'), { onCommit });
+    expect(() => bad.mount()).toThrow('effect 실패');
+    expect(() => bad.update()).toThrow('effect 실패');
+    expect(onCommit).not.toHaveBeenCalled();
+
+    failEffect = false;
+    const app = new FunctionComponent(App, document.createElement('div'), { onCommit });
+    app.mount();
+    onCommit.mockClear();
+    failRender = true;
+    expect(() => app.update()).toThrow('렌더 실패');
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it('생략해도 동작한다', () => {
+    const app = new FunctionComponent(() => h('p', null, 'a'), document.createElement('div'));
+
+    expect(() => {
+      app.mount();
+      app.update();
+    }).not.toThrow();
   });
 });

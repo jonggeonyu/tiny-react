@@ -105,7 +105,7 @@ function runEffects(instance) {
  * @param {Function} component 루트 컴포넌트 함수. `{}`를 받아 화면 내용을 돌려준다.
  * @param {Element} container 화면을 그릴 영역. 영역의 내용만 바뀌고 영역 자체는 그대로이다.
  * @param {object} [options] 선택 값
- * @param {Function} [options.onCommit] 화면 반영 뒤에 쓸 함수. 지금은 저장만 하고 호출하지 않는다.
+ * @param {Function} [options.onCommit] `mount()`와 `update()`가 effect까지 성공한 뒤 변경 목록을 받아 호출하는 함수. `mount()`는 빈 배열을 넘긴다. 렌더나 effect가 실패하면 호출하지 않는다.
  */
 class FunctionComponent {
   constructor(component, container, options = {}) {
@@ -127,6 +127,7 @@ class FunctionComponent {
    * 처음 렌더해서 영역의 내용을 그린 뒤 effect를 실행한다.
    * 렌더나 그리기가 실패하면 마운트되지 않은 상태로 남고 영역의 내용은 그대로이다.
    * effect가 실패하면 오류를 던지지만 마운트는 끝난 상태이다.
+   * 성공하면 effect 뒤에 `onCommit([])`을 호출한다. effect가 실패하면 호출하지 않는다.
    *
    * @returns {void}
    * @throws {Error} 렌더 중에 호출했거나, 이미 마운트했거나, 렌더, 그리기, effect가 실패하면 던진다.
@@ -143,6 +144,7 @@ class FunctionComponent {
     renderRoot(this.container, next);
     this.vdom = next;
     runEffects(this);
+    if (this.onCommit) this.onCommit([]);
   }
 
   /**
@@ -152,6 +154,7 @@ class FunctionComponent {
    * `patch`가 실패하면 이전 `vdom`으로 영역을 다시 그리고, `vdom`은 갱신하지 않는다.
    * 렌더나 `patch`가 실패하면 effect를 실행하지 않고 `isStale`이 `true`가 되고, 성공하면 `false`가 된다.
    * effect의 실패는 렌더 실패가 아니므로 오류만 던지고 `isStale`은 바꾸지 않는다.
+   * 성공하면 effect 뒤에 `onCommit(changes)`를 호출한다. effect가 실패하면 호출하지 않는다.
    *
    * @returns {void}
    * @throws {Error} 렌더 중에 호출했거나, 마운트 전이거나, 렌더, `patch`, effect가 실패하면 던진다.
@@ -163,9 +166,11 @@ class FunctionComponent {
       throw new Error('마운트 전에는 update()를 호출할 수 없다.');
     }
 
+    let changes;
+
     try {
       const next = render(this);
-      const changes = diff(this.vdom, next);
+      changes = diff(this.vdom, next);
 
       try {
         patch(this.container, changes);
@@ -184,6 +189,7 @@ class FunctionComponent {
     }
 
     runEffects(this);
+    if (this.onCommit) this.onCommit(changes);
   }
 
   /**
