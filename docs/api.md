@@ -8,6 +8,14 @@ Virtual DOM은 만든 뒤 수정하지 않는 값이므로 복사하지 않고 �
 </dd>
 </dl>
 
+## Constants
+
+<dl>
+<dt><a href="#logEntries">logEntries</a></dt>
+<dd><p>History와 번호를 맞춘 Patch 설명 목록이다. 첫 항목은 초기 상태이다.</p>
+</dd>
+</dl>
+
 ## Functions
 
 <dl>
@@ -58,6 +66,9 @@ Virtual DOM은 만든 뒤 수정하지 않는 값이므로 복사하지 않고 �
 <code>changes</code>는 <code>container</code>의 내용을 나타내는 루트 Virtual DOM과 새 루트를 <code>diff</code>로 비교한 결과여야 한다.
 <code>path</code>가 맞으려면 <code>container</code>의 <code>childNodes</code>와 이전 Virtual DOM의 <code>children</code>이 번호까지 일치해야 한다.</p>
 </dd>
+<dt><a href="#describeChanges">describeChanges(changes)</a> ⇒ <code>string</code></dt>
+<dd><p>변경 목록을 한 줄 문자열로 바꾼다. 4개가 넘으면 앞의 3개 뒤에 <code>외 N개</code>를 붙인다.</p>
+</dd>
 <dt><a href="#formatHtml">formatHtml(root)</a> ⇒ <code>string</code></dt>
 <dd><p>루트 Virtual DOM을 줄바꿈과 2칸 들여쓰기를 맞춘 HTML 문자열로 바꾼다.
 자식이 모두 요소일 때만 줄을 나눠서, 결과를 <code>htmlToVdom</code>으로 다시 읽으면 같은 Virtual DOM이 된다.
@@ -96,6 +107,8 @@ Virtual DOM은 만든 뒤 수정하지 않는 값이므로 복사하지 않고 �
     * [.current()](#StateHistory+current) ⇒ [<code>VNode</code>](#VNode) \| <code>undefined</code>
     * [.back()](#StateHistory+back) ⇒ [<code>VNode</code>](#VNode) \| <code>null</code>
     * [.forward()](#StateHistory+forward) ⇒ [<code>VNode</code>](#VNode) \| <code>null</code>
+    * [.position()](#StateHistory+position) ⇒ <code>number</code>
+    * [.size()](#StateHistory+size) ⇒ <code>number</code>
 
 <a name="StateHistory+push"></a>
 
@@ -130,6 +143,26 @@ Virtual DOM을 저장하고 현재 위치로 삼는다.
 
 **Kind**: instance method of [<code>StateHistory</code>](#StateHistory)  
 **Returns**: [<code>VNode</code>](#VNode) \| <code>null</code> - 다음 Virtual DOM. 다음 항목이 없으면 `null`이고 포인터는 그대로이다.  
+<a name="StateHistory+position"></a>
+
+### stateHistory.position() ⇒ <code>number</code>
+현재 위치를 1부터 센 번호로 돌려준다.
+
+**Kind**: instance method of [<code>StateHistory</code>](#StateHistory)  
+**Returns**: <code>number</code> - 현재 번호. 저장한 항목이 없으면 `0`이다.  
+<a name="StateHistory+size"></a>
+
+### stateHistory.size() ⇒ <code>number</code>
+저장된 항목의 개수를 돌려준다.
+
+**Kind**: instance method of [<code>StateHistory</code>](#StateHistory)  
+**Returns**: <code>number</code> - 항목 개수  
+<a name="logEntries"></a>
+
+## logEntries
+History와 번호를 맞춘 Patch 설명 목록이다. 첫 항목은 초기 상태이다.
+
+**Kind**: global constant  
 <a name="setProp"></a>
 
 ## setProp(element, name, value) ⇒ <code>void</code>
@@ -286,6 +319,18 @@ HTML 문자열을 루트 Virtual DOM으로 바꾼다.
 | Param | Type | Description |
 | --- | --- | --- |
 | container | <code>Element</code> | 변경을 적용할 영역 |
+| changes | [<code>Array.&lt;Change&gt;</code>](#Change) | `diff`가 돌려준 변경 목록 |
+
+<a name="describeChanges"></a>
+
+## describeChanges(changes) ⇒ <code>string</code>
+변경 목록을 한 줄 문자열로 바꾼다. 4개가 넘으면 앞의 3개 뒤에 `외 N개`를 붙인다.
+
+**Kind**: global function  
+**Returns**: <code>string</code> - 쉼표로 이은 설명  
+
+| Param | Type | Description |
+| --- | --- | --- |
 | changes | [<code>Array.&lt;Change&gt;</code>](#Change) | `diff`가 돌려준 변경 목록 |
 
 <a name="formatHtml"></a>

@@ -248,4 +248,23 @@ describe('StateHistory', () => {
     expect(other.current()).toBe(second);
     expect(other.back()).toBeNull();
   });
+
+  describe('position과 size', () => {
+    it('빈 상태는 0과 0이다', () => {
+      const history = new StateHistory();
+
+      expect([history.position(), history.size()]).toEqual([0, 0]);
+    });
+
+    it('저장과 이동에 따라 바뀌고 앞쪽 기록을 지우면 size가 줄어든다', () => {
+      const history = historyOf(rootOf('a'), rootOf('b'), rootOf('c'));
+
+      expect([history.position(), history.size()]).toEqual([3, 3]);
+      history.back();
+      history.back();
+      expect([history.position(), history.size()]).toEqual([1, 3]);
+      history.push(rootOf('d'));
+      expect([history.position(), history.size()]).toEqual([2, 2]);
+    });
+  });
 });

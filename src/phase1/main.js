@@ -3,6 +3,7 @@ import { diff } from '../core/diff.js';
 import { containerToVdom } from '../core/domToVdom.js';
 import { htmlToVdom } from '../core/html.js';
 import { patch } from '../core/patch.js';
+import { describeChanges } from './describeChanges.js';
 import { formatHtml } from './formatHtml.js';
 import { StateHistory } from './StateHistory.js';
 
@@ -10,8 +11,37 @@ const actual = document.querySelector('#actual');
 const source = document.querySelector('#source');
 const preview = document.querySelector('#preview');
 const errorMessage = document.querySelector('#error');
+const historyStatus = document.querySelector('#history-status');
+const patchLog = document.querySelector('#patch-log');
 
 const history = new StateHistory();
+
+/** History와 번호를 맞춘 Patch 설명 목록이다. 첫 항목은 초기 상태이다. */
+const logEntries = [];
+
+/**
+ * `#history-status`와 `#patch-log`를 History의 현재 상태로 갱신한다.
+ *
+ * @private
+ * @returns {void}
+ */
+function renderHistoryInfo() {
+  historyStatus.textContent = `${history.position()} / ${history.size()}`;
+  patchLog.replaceChildren(
+    ...logEntries.map((text, index) => {
+      const item = document.createElement('li');
+
+      item.textContent = text;
+      item.title = text;
+
+      if (index === history.position() - 1) {
+        item.setAttribute('aria-current', 'true');
+      }
+
+      return item;
+    }),
+  );
+}
 
 /**
  * 테스트 영역을 렌더링한다. `textarea`에 정렬한 HTML을 넣고 미리보기를 같은 내용으로 그린다.
@@ -46,6 +76,8 @@ function commit(next) {
 
     patch(actual, changes);
     history.push(next);
+    logEntries.length = history.position() - 1;
+    logEntries.push(describeChanges(changes));
   } catch (error) {
     // patch는 적용한 변경을 되돌리지 않으므로, 다시 그려야 실제 영역과 History가 어긋나지 않는다.
     renderRoot(actual, current);
@@ -71,6 +103,8 @@ function handlePatch() {
   } catch (error) {
     errorMessage.textContent = error.message;
   }
+
+  renderHistoryInfo();
 }
 
 /**
@@ -112,6 +146,8 @@ function handleMove(move) {
   } catch (error) {
     errorMessage.textContent = error.message;
   }
+
+  renderHistoryInfo();
 }
 
 /**
@@ -127,6 +163,8 @@ function initialize() {
   renderRoot(actual, root);
   renderTestArea(root);
   history.push(root);
+  logEntries.push('초기 상태');
+  renderHistoryInfo();
 }
 
 initialize();

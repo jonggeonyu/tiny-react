@@ -61,4 +61,22 @@ export class StateHistory {
 
     return this.current();
   }
+
+  /**
+   * 현재 위치를 1부터 센 번호로 돌려준다.
+   *
+   * @returns {number} 현재 번호. 저장한 항목이 없으면 `0`이다.
+   */
+  position() {
+    return this.#pointer + 1;
+  }
+
+  /**
+   * 저장된 항목의 개수를 돌려준다.
+   *
+   * @returns {number} 항목 개수
+   */
+  size() {
+    return this.#entries.length;
+  }
 }

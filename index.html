@@ -3,14 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>tiny-react Phase 1</title>
+  <title>Phase 1. Virtual DOM / Diff / Patch</title>
   <link rel="stylesheet" href="/src/phase1/style.css">
 </head>
 <body>
-  <h1>tiny-react Phase 1</h1>
+  <h1>Phase 1. Virtual DOM / Diff / Patch</h1>
   <div class="panels">
     <section class="panel">
-      <h2>실제 영역</h2>
+      <div class="panel-header">
+        <h2>실제 영역</h2>
+      </div>
       <div id="actual">
         <!-- 샘플 문서 -->
         <h3 class="title">장보기 목록</h3>
@@ -22,17 +24,22 @@
         </ul>
         <a href="https://example.com" title="예시 링크">링크</a>
       </div>
+      <h3 class="log-title">Patch 기록</h3>
+      <ol id="patch-log"></ol>
     </section>
     <section class="panel">
-      <h2>테스트 영역</h2>
-      <textarea id="source" wrap="off" autocomplete="off" spellcheck="false" aria-label="HTML 코드"></textarea>
-      <div class="buttons">
-        <button id="back" type="button">뒤로가기</button>
-        <button id="patch" type="button">Patch</button>
-        <button id="forward" type="button">앞으로가기</button>
+      <div class="panel-header">
+        <h2>테스트 영역</h2>
+        <div class="buttons">
+          <button id="back" type="button">뒤로가기</button>
+          <span id="history-status">1 / 1</span>
+          <button id="forward" type="button">앞으로가기</button>
+          <button id="patch" type="button">Patch</button>
+        </div>
       </div>
-      <p id="error" role="alert"></p>
       <div id="preview"></div>
+      <p id="error" role="alert"></p>
+      <textarea id="source" wrap="off" autocomplete="off" spellcheck="false" aria-label="HTML 코드"></textarea>
     </section>
   </div>
   <script type="module" src="/src/phase1/main.js"></script>

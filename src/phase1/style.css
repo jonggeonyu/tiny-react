@@ -51,7 +51,7 @@ h1 {
 }
 
 h2 {
-  margin: 0 0 12px;
+  margin: 0;
   font-size: 18px;
   line-height: 22px;
   font-weight: 700;
@@ -130,7 +130,47 @@ h2 {
   outline-offset: 2px;
 }
 
-.buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+.panel-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  margin: 0 0 12px;
+}
+
+.buttons { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+
+#history-status {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-on-view-2);
+  white-space: nowrap;
+}
+
+#source { margin-top: 0; }
+
+.log-title { margin: 16px 0 8px; font-size: 14px; line-height: 20px; font-weight: 700; color: var(--color-on-view-1); }
+
+#patch-log {
+  max-height: 160px;
+  margin: 0;
+  padding-left: 0;
+  list-style-position: inside;
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-on-view-2);
+}
+#patch-log li {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#patch-log li[aria-current="true"] {
+  color: var(--color-primary);
+  font-weight: 700;
+}
 
 button {
   min-height: 44px;
@@ -164,7 +204,7 @@ button:focus-visible {
 
 #error {
   min-height: 1.5em;
-  margin: 8px 0 12px;
+  margin: 8px 0;
 }
 
 #error:not(:empty) {

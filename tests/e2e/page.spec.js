@@ -425,7 +425,39 @@ test.describe('페이지 동작', () => {
     expect(await readScreen(page)).toEqual(syncedScreen(INITIAL_HTML, INITIAL_SOURCE));
   });
 
-  test('로드하면 textarea가 여러 줄로 정렬되어 있다', async ({ page }) => {
+  test('로드하면 History 위치가 1 / 1이고 기록에 초기 상태만 있다', async ({ page }) => {
+    await expect(page.locator('#history-status')).toHaveText('1 / 1');
+    await expect(page.locator('#patch-log li')).toHaveText(['초기 상태']);
+    await expect(page.locator('#patch-log li')).toHaveAttribute('aria-current', 'true');
+  });
+
+  test('Patch하면 위치가 2 / 2가 되고 설명 한 줄이 현재 항목으로 붙는다', async ({ page }) => {
+    await patchWith(page, SECOND_HTML);
+
+    await expect(page.locator('#history-status')).toHaveText('2 / 2');
+    await expect(page.locator('#patch-log li')).toHaveText(['초기 상태', '텍스트 "케이크"로 변경']);
+    await expect(page.locator('#patch-log li').nth(1)).toHaveAttribute('aria-current', 'true');
+    await expect(page.locator('#patch-log li').nth(1)).toHaveAttribute('title', '텍스트 "케이크"로 변경');
+
+    await page.locator('#back').click();
+    await expect(page.locator('#history-status')).toHaveText('1 / 2');
+    await expect(page.locator('#patch-log li').nth(0)).toHaveAttribute('aria-current', 'true');
+  });
+
+  test('뒤로 간 뒤 새로 Patch하면 앞쪽 기록이 지워진다', async ({ page }) => {
+    await patchWith(page, SECOND_HTML);
+    await patchWith(page, THIRD_HTML);
+    await page.locator('#back').click();
+    await page.locator('#back').click();
+    await patchWith(page, '<p>새 글</p>');
+
+    await expect(page.locator('#history-status')).toHaveText('2 / 2');
+    await expect(page.locator('#patch-log li')).toHaveCount(2);
+    await expect(page.locator('#patch-log li').first()).toHaveText('초기 상태');
+    await expect(page.locator('#patch-log')).not.toContainText('케이크');
+  });
+
+  test('로드하면 textarea가 여러 줄로 정렬되어 있다',async ({ page }) => {
     const { source } = await readScreen(page);
 
     expect(source.split('\n')).toEqual([
