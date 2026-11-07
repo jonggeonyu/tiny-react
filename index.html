@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>tiny-react Phase 1</title>
+  <link rel="stylesheet" href="/src/phase1/style.css">
+</head>
+<body>
+  <h1>tiny-react Phase 1</h1>
+  <div class="panels">
+    <section class="panel">
+      <h2>실제 영역</h2>
+      <div id="actual">
+        <!-- 샘플 문서 -->
+        <h3 class="title">장보기 목록</h3>
+        <p>오늘 살 것을 <strong>적어</strong> 두었다.</p>
+        <ul id="list">
+          <li>사과</li>
+          <li class="done">우유</li>
+          <li>빵</li>
+        </ul>
+        <a href="https://example.com" title="예시 링크">링크</a>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>테스트 영역</h2>
+      <textarea id="source" autocomplete="off" spellcheck="false" aria-label="HTML 코드"></textarea>
+      <div class="buttons">
+        <button id="back" type="button">뒤로가기</button>
+        <button id="patch" type="button">Patch</button>
+        <button id="forward" type="button">앞으로가기</button>
+      </div>
+      <p id="error" role="alert"></p>
+      <div id="preview"></div>
+    </section>
+  </div>
+  <script type="module" src="/src/phase1/main.js"></script>
+</body>
+</html>

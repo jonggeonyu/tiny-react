@@ -7,6 +7,7 @@ Phase 1은 Virtual DOM, Diff, Patch이고, Phase 2는 Component, State, Hooks이
 
 ## 명령어
 - 테스트: `npm test`
+- 브라우저 기능 테스트: `npm run test:e2e`
 - 개발 서버: `npm run dev`
 - API 문서 생성: `npm run docs` (`src/`에 `.js` 파일이 있어야 동작한다)
 

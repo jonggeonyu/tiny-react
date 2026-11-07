@@ -39,6 +39,7 @@ src/
     ├── main.js            페이지 로드와 버튼 핸들러
     └── style.css
 tests/                     src/의 파일별 단위 테스트
+└── e2e/                   브라우저 기능 테스트
 ```
 
 ## 개발 환경
@@ -47,8 +48,10 @@ tests/                     src/의 파일별 단위 테스트
 - Vite는 ES 모듈을 쓰는 페이지를 띄우는 개발 서버이다.
 - Vitest는 단위 테스트를 실행하고, jsdom은 테스트에서 브라우저 DOM을 대신한다.
 - jsdoc-to-markdown은 JSDoc 주석으로 `docs/api.md`를 만든다.
+- Playwright는 실제 브라우저에서 화면 동작을 확인하는 기능 테스트를 실행한다. 설치된 Chrome을 쓰므로 브라우저를 따로 내려받지 않는다.
 
 `npm test`는 `tests/**/*.test.js`를 jsdom 환경에서 실행한다.
+`npm run test:e2e`는 `tests/e2e/*.spec.js`를 Chrome에서 실행한다. jsdom과 브라우저의 파싱 결과가 다른 경우가 있어서, 화면 동작은 브라우저에서 따로 확인한다.
 JSDoc은 `_`로 시작하는 파일을 기본으로 제외하므로, `src/`의 파일 이름은 `_`로 시작하지 않는다.
 
 ## Virtual DOM 형태
@@ -167,7 +170,9 @@ JSDoc은 `_`로 시작하는 파일을 기본으로 제외하므로, `src/`의 �
 5. 변경 목록을 `patch`로 실제 영역에 적용한다.
 6. 새 Virtual DOM을 State History에 저장한다.
 
-`patch`가 도중에 실패하면 현재 Virtual DOM을 `renderRoot`로 실제 영역에 다시 그려서, 실제 영역과 State History가 어긋나지 않게 한다.
+`diff`나 `patch`가 실패하면 현재 Virtual DOM을 `renderRoot`로 실제 영역과 미리보기에 다시 그려서, 두 영역과 State History가 어긋나지 않게 한다. `textarea`는 사용자가 고칠 수 있게 그대로 둔다.
+
+1~6번에서 오류가 나면 버튼 아래에 오류 내용을 한 줄로 보여 주고 History에 저장하지 않는다. `<div =a="1">`처럼 파서는 받아들이지만 `setAttribute`가 거부하는 입력이 있기 때문이다. 이 입력은 2번의 `renderRoot`에서 실패하므로 실제 영역에 닿지 않는다. 오류 표시는 다음에 성공한 동작에서 지운다.
 
 ### 뒤로가기와 앞으로가기
 1. `current()`로 현재 Virtual DOM을 보관한다.
@@ -175,11 +180,15 @@ JSDoc은 `_`로 시작하는 파일을 기본으로 제외하므로, `src/`의 �
 3. 보관한 Virtual DOM과 목표 Virtual DOM을 `diff`로 비교하고, 결과를 `patch`로 실제 영역에 적용한다.
 4. 목표 Virtual DOM으로 테스트 영역을 다시 렌더링한다.
 
+`patch`가 도중에 실패하면 목표 Virtual DOM을 `renderRoot`로 실제 영역에 다시 그린다. 포인터는 2번에서 이미 옮겨졌으므로, 실제 영역을 포인터에 맞춘다.
+
 ## 범위 밖
 - 입력 HTML은 사용자가 직접 쓰는 샘플이므로 보안 필터링을 하지 않는다.
 - `key`를 쓰는 목록 비교는 요구사항에 없으므로 구현하지 않는다.
+- `{ a: '1', A: '1' }`처럼 대소문자만 다른 속성 이름이 함께 있는 `props`는 지원하지 않는다. HTML 속성 이름은 대소문자를 구분하지 않고, 파서는 이런 `props`를 만들지 않는다.
 - SVG처럼 네임스페이스가 필요한 요소는 지원하지 않는다.
 - `input`의 `value`처럼 속성이 아닌 프로퍼티는 비교하지 않는다.
+- 실제 영역은 `patch`와 `renderRoot`로만 바뀐다고 전제한다. `<details>`를 클릭해 생긴 `open`이나 `contenteditable`로 고친 내용처럼 사용자가 실제 영역을 직접 바꾸면 Virtual DOM과 어긋난다. `diff`는 Virtual DOM끼리만 비교하므로 이 어긋남을 찾지 못한다.
 - `textarea`에 다시 넣는 HTML은 줄바꿈과 들여쓰기를 정렬하지 않는다.
 - HTML 문자열로 왕복할 때 파서가 내용을 바꾸는 입력은 고치지 않아도 변경으로 잡힐 수 있다. 파싱을 브라우저에 맡기는 설계의 한계이므로 보정하지 않는다.
   - `<pre>`, `<textarea>`, `<listing>`의 첫 줄바꿈은 지워진다.
