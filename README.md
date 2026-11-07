@@ -68,6 +68,7 @@ src/
 │   └── patch.js       변경 목록을 실제 DOM에 적용
 └── phase1/            Phase 1 페이지 전용 코드
     ├── StateHistory.js
+    ├── formatHtml.js  textarea에 넣을 HTML 정렬
     ├── main.js
     └── style.css
 tests/
@@ -95,6 +96,7 @@ npm run test:e2e
 
 - [요구사항](docs/requirements.md)
 - [설계](docs/architecture.md): 설계 결정의 이유와 `범위 밖` 항목
+- [디자인](DESIGN.md): 검증 페이지가 따르는 시각 언어
 - [API](docs/api.md): JSDoc에서 자동 생성한다. 다시 만들려면 `npm run docs`를 실행한다.
 
 ## 알려진 한계

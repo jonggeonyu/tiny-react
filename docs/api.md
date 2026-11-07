@@ -58,6 +58,13 @@ Virtual DOM은 만든 뒤 수정하지 않는 값이므로 복사하지 않고 �
 <code>changes</code>는 <code>container</code>의 내용을 나타내는 루트 Virtual DOM과 새 루트를 <code>diff</code>로 비교한 결과여야 한다.
 <code>path</code>가 맞으려면 <code>container</code>의 <code>childNodes</code>와 이전 Virtual DOM의 <code>children</code>이 번호까지 일치해야 한다.</p>
 </dd>
+<dt><a href="#formatHtml">formatHtml(root)</a> ⇒ <code>string</code></dt>
+<dd><p>루트 Virtual DOM을 줄바꿈과 2칸 들여쓰기를 맞춘 HTML 문자열로 바꾼다.
+자식이 모두 요소일 때만 줄을 나눠서, 결과를 <code>htmlToVdom</code>으로 다시 읽으면 같은 Virtual DOM이 된다.
+텍스트가 섞인 요소는 안쪽까지 <code>vdomToHtml</code> 결과 그대로 한 줄에 두고, 자식이 없는 요소와 <code>pre</code>, <code>listing</code>도 한 줄이다.
+루트도 같은 규칙이므로 루트에 텍스트가 섞이면 결과는 <code>vdomToHtml(root)</code>와 같다.
+이스케이프와 직렬화는 <code>vdomToHtml</code>을 그대로 쓰며, 왕복의 범위도 <code>vdomToHtml</code>과 같다.</p>
+</dd>
 </dl>
 
 ## Typedefs
@@ -280,6 +287,26 @@ HTML 문자열을 루트 Virtual DOM으로 바꾼다.
 | --- | --- | --- |
 | container | <code>Element</code> | 변경을 적용할 영역 |
 | changes | [<code>Array.&lt;Change&gt;</code>](#Change) | `diff`가 돌려준 변경 목록 |
+
+<a name="formatHtml"></a>
+
+## formatHtml(root) ⇒ <code>string</code>
+루트 Virtual DOM을 줄바꿈과 2칸 들여쓰기를 맞춘 HTML 문자열로 바꾼다.
+자식이 모두 요소일 때만 줄을 나눠서, 결과를 `htmlToVdom`으로 다시 읽으면 같은 Virtual DOM이 된다.
+텍스트가 섞인 요소는 안쪽까지 `vdomToHtml` 결과 그대로 한 줄에 두고, 자식이 없는 요소와 `pre`, `listing`도 한 줄이다.
+루트도 같은 규칙이므로 루트에 텍스트가 섞이면 결과는 `vdomToHtml(root)`와 같다.
+이스케이프와 직렬화는 `vdomToHtml`을 그대로 쓰며, 왕복의 범위도 `vdomToHtml`과 같다.
+
+**Kind**: global function  
+**Returns**: <code>string</code> - 정렬한 HTML 문자열. 루트 자체의 태그는 들어가지 않는다.  
+**Throws**:
+
+- <code>Error</code> 노드를 만들지 못하면 `vdomToHtml`의 오류를 그대로 던진다.
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| root | [<code>VElement</code>](#VElement) | `type`이 `'root'`인 루트 노드 |
 
 <a name="Change"></a>
 

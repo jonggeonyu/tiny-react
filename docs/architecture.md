@@ -16,6 +16,7 @@ htmlToVdom(html)             HTML 문자열 → 루트 Virtual DOM
 diff(oldVdom, newVdom)       변경 목록을 반환
 patch(container, changes)    변경 목록을 실제 DOM에 적용
 StateHistory                 저장, 뒤로, 앞으로, 현재 값 조회
+formatHtml(root)             루트 Virtual DOM → 줄바꿈과 들여쓰기를 맞춘 HTML 문자열
 버튼 핸들러                   위 함수들을 순서대로 호출
 ```
 
@@ -36,6 +37,7 @@ src/
 │   └── patch.js
 └── phase1/                Phase 1 페이지 전용 코드
     ├── StateHistory.js
+    ├── formatHtml.js      textarea에 넣을 HTML 정렬
     ├── main.js            페이지 로드와 버튼 핸들러
     └── style.css
 tests/                     src/의 파일별 단위 테스트
@@ -160,7 +162,7 @@ JSDoc은 `_`로 시작하는 파일을 기본으로 제외하므로, `src/`의 �
 3. 이 Virtual DOM으로 테스트 영역을 렌더링한다.
 4. 이 Virtual DOM을 State History에 저장한다.
 
-테스트 영역을 렌더링하는 일은 `textarea`에 `vdomToHtml` 결과를 넣고, 미리보기를 `renderRoot`로 그리는 일이다.
+테스트 영역을 렌더링하는 일은 `textarea`에 `formatHtml` 결과를 넣고, 미리보기를 `renderRoot`로 그리는 일이다.
 
 ### Patch 버튼
 1. `textarea`의 내용을 `htmlToVdom`으로 변환한다.
@@ -190,12 +192,12 @@ JSDoc은 `_`로 시작하는 파일을 기본으로 제외하므로, `src/`의 �
 - `input`의 `value`처럼 속성이 아닌 프로퍼티는 비교하지 않는다.
 - 실제 영역은 `patch`와 `renderRoot`로만 바뀐다고 전제한다. `<details>`를 클릭해 생긴 `open`이나 `contenteditable`로 고친 내용처럼 사용자가 실제 영역을 직접 바꾸면 Virtual DOM과 어긋난다. `diff`는 Virtual DOM끼리만 비교하므로 이 어긋남을 찾지 못한다. `MutationObserver`로 감지할 수는 있지만 요구사항에 없어 구현하지 않는다.
 - 실제 영역과 미리보기가 같은 문서에 있으므로, 같은 `name`의 라디오 버튼은 한 그룹이 되어 `checked` 상태가 한쪽에만 남는다.
-- `textarea`에 다시 넣는 HTML은 줄바꿈과 들여쓰기를 정렬하지 않는다.
+- 사용자가 입력 중인 `textarea`의 HTML은 정렬하지 않는다. Patch는 `textarea`를 다시 쓰지 않고, 정렬은 페이지 로드와 뒤로가기, 앞으로가기에서만 일어난다.
 - HTML 문자열로 왕복할 때 파서가 내용을 바꾸는 입력은 고치지 않아도 변경으로 잡힐 수 있다. 파싱을 브라우저에 맡기는 설계의 한계이므로 보정하지 않는다.
   - `<pre>`, `<textarea>`, `<listing>`의 첫 줄바꿈은 지워진다.
   - `&#13;`은 `\r`이지만 다시 읽으면 `\n`이 된다.
   - `<plaintext>`는 왕복할 때마다 닫는 태그가 내용에 붙는다.
-  - `<form>`이나 `<a>`처럼 파서가 고쳐 주는 잘못된 중첩은 다시 읽을 때 또 달라질 수 있다.
+  - `<form>`, `<a>`, 표 안의 `<li>`처럼 파서가 고쳐 주는 잘못된 중첩은 다시 읽을 때 또 달라질 수 있다.
   - `<noscript>`는 브라우저에서 문서 파서와 `<template>` 파서의 해석이 다르다. 샘플 HTML에 쓰지 않는다.
 - `<template>` 요소는 내용이 `childNodes`가 아닌 `content`에 있으므로, 안의 내용은 Virtual DOM에 들어가지 않는다.
 - 공백 규칙은 태그와 상관없이 적용한다. `<pre>`와 `<textarea>`처럼 공백이 의미를 갖는 요소에서도 줄바꿈이 포함된 공백만 있는 텍스트는 지워진다.
@@ -210,8 +212,24 @@ JSDoc은 `_`로 시작하는 파일을 기본으로 제외하므로, `src/`의 �
 
 이 결정에 따라 페이지 동작에 두 가지 변환이 필요하다.
 
-- 테스트 영역을 렌더링할 때는 `vdomToHtml`로 Virtual DOM을 HTML 문자열로 바꿔 `textarea`에 넣고, 미리보기도 같은 내용으로 그린다.
+- 테스트 영역을 렌더링할 때는 `formatHtml`로 Virtual DOM을 HTML 문자열로 바꿔 `textarea`에 넣고, 미리보기도 같은 내용으로 그린다.
 - 테스트 영역을 Virtual DOM으로 변환할 때는 `htmlToVdom`으로 `textarea`의 HTML 문자열을 변환한다.
+
+### textarea의 HTML 정렬
+`formatHtml(root)`는 요소마다 줄을 나누고 2칸씩 들여 쓴다.
+자식이 모두 요소일 때만 줄을 나누고, 텍스트가 섞이면 그 요소 전체를 `vdomToHtml` 결과 그대로 한 줄에 둔다.
+`<pre>`와 `<listing>`도 한 줄에 둔다.
+
+이유: 정렬한 HTML을 다시 읽어도 Virtual DOM이 같아야 한다. 그래야 고치지 않은 Patch가 변경으로 잡히지 않는다.
+요소 사이에 넣은 줄바꿈과 들여쓰기는 `domToVdom`이 지우지만, 텍스트 옆에 넣으면 텍스트의 일부가 된다.
+`<pre>`는 파서가 첫 줄바꿈을 지워서 들여쓰기만 남으므로 내용이 된다.
+`formatHtml`은 `textarea`에만 쓰는 페이지 전용 코드이므로 `src/core/`가 아니라 `src/phase1/`에 둔다.
+텍스트가 섞인 요소 안은 정렬하지 않으므로, 최상위에 텍스트나 같은 줄 공백이 있으면 전체가 한 줄로 나온다.
+
+### 화면 디자인
+검증 페이지의 색, 글자, 코너, 간격은 `DESIGN.md`의 시각 언어를 따른다.
+강조는 오렌지 하나로 모으고, 구획은 그림자 대신 반투명 헤어라인으로 나눈다.
+HTML 편집기는 코딩 도구처럼 어두운 표면으로 두고, 줄을 자동으로 접지 않아 정렬이 유지되게 한다.
 
 ### setProp
 속성을 넣는 코드를 `createDom.js`의 `setProp(element, name, value)` 한 곳에 둔다.

@@ -1,8 +1,9 @@
 import { renderRoot } from '../core/createDom.js';
 import { diff } from '../core/diff.js';
 import { containerToVdom } from '../core/domToVdom.js';
-import { htmlToVdom, vdomToHtml } from '../core/html.js';
+import { htmlToVdom } from '../core/html.js';
 import { patch } from '../core/patch.js';
+import { formatHtml } from './formatHtml.js';
 import { StateHistory } from './StateHistory.js';
 
 const actual = document.querySelector('#actual');
@@ -13,14 +14,14 @@ const errorMessage = document.querySelector('#error');
 const history = new StateHistory();
 
 /**
- * 테스트 영역을 렌더링한다. `textarea`에 HTML을 넣고 미리보기를 같은 내용으로 그린다.
+ * 테스트 영역을 렌더링한다. `textarea`에 정렬한 HTML을 넣고 미리보기를 같은 내용으로 그린다.
  *
  * @private
  * @param {VElement} root 렌더링할 루트 Virtual DOM
  * @returns {void}
  */
 function renderTestArea(root) {
-  source.value = vdomToHtml(root);
+  source.value = formatHtml(root);
   renderRoot(preview, root);
 }
 
