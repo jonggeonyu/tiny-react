@@ -136,7 +136,8 @@ npm run test:e2e
 ## 문서
 
 - [요구사항](docs/requirements.md)
-- [설계](docs/architecture.md): 설계 결정의 이유와 `범위 밖` 항목
+- [Phase 1 설계](docs/architecture-phase1.md): Virtual DOM, Diff, Patch의 설계와 `범위 밖` 항목
+- [Phase 2 설계](docs/architecture-phase2.md): Component, State, Hooks, 게임의 설계와 `Phase 2 범위 밖` 항목
 - [디자인](DESIGN.md): 검증 페이지가 따르는 시각 언어
 - [API](docs/api.md): JSDoc에서 자동 생성한다. 다시 만들려면 `npm run docs`를 실행한다.
 
@@ -145,4 +146,4 @@ npm run test:e2e
 `key`로 목록을 비교하지 않으므로, 목록 앞쪽에 항목을 넣으면 뒤따르는 항목이 모두 변경으로 잡힌다.
 입력 HTML은 사용자가 직접 쓰는 샘플로 보고 보안 필터링을 하지 않는다. `<script>`도 그대로 실행되므로 믿을 수 없는 HTML을 넣으면 안 된다.
 Hook과 State는 과제 제약대로 루트 컴포넌트에서만 쓸 수 있다. `onChange`는 브라우저의 `change` 이벤트이므로 입력마다 받으려면 `onInput`을 쓴다.
-나머지 한계는 [설계 문서의 `범위 밖`](docs/architecture.md#범위-밖)과 `Phase 2 범위 밖`에 있다.
+나머지 한계는 [Phase 1의 `범위 밖`](docs/architecture-phase1.md#범위-밖)과 [`Phase 2 범위 밖`](docs/architecture-phase2.md#phase-2-범위-밖)에 있다.

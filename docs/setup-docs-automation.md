@@ -5,7 +5,7 @@
 
 ## 목표
 - 함수와 클래스의 설명은 JSDoc 주석에서 `docs/api.md`로 자동 생성한다.
-- 구조와 설계 이유는 `docs/architecture.md`에 기록한다.
+- 구조와 설계 이유는 Phase별 설계 문서(`docs/architecture-phase1.md`, `docs/architecture-phase2.md`)에 기록한다.
 
 ## 작업
 1. `package.json`이 없으면 `npm init -y`로 만든다.
@@ -17,9 +17,9 @@
    ## 문서화
    - 내보내는 함수와 클래스에는 JSDoc을 작성한다.
    - `docs/api.md`는 자동 생성 파일이므로 직접 고치지 않는다.
-   - 구조나 설계가 바뀌면 `docs/architecture.md`에 변경 내용과 이유를 적는다.
+   - 구조나 설계가 바뀌면 해당 Phase의 설계 문서에 변경 내용과 이유를 적는다.
 
-5. `docs/architecture.md`가 없으면 제목과 `모듈 구조`, `설계 결정` 절만 있는 빈 문서로 만든다.
+5. 지금 Phase의 설계 문서가 없으면 제목과 `모듈 구조`, `설계 결정` 절만 있는 빈 문서로 만든다.
 6. `src/`에 `.js` 파일이 있으면 `.claude/settings.json`에 다음 Stop 훅을 등록한다.
    기존 설정이 있으면 지우지 말고 합친다.
 

@@ -3,7 +3,7 @@
 Vanilla JavaScript로 미니 리액트를 구현한다.
 Phase 1은 Virtual DOM, Diff, Patch이고, Phase 2는 Component, State, Hooks이다.
 전체 요구사항은 `docs/requirements.md`에 있다. 기능을 구현하기 전에 관련 절을 읽는다.
-설계는 `docs/architecture.md`에 있다. 구현 전에 관련 절을 읽는다.
+설계는 `docs/architecture-phase1.md`와 `docs/architecture-phase2.md`에 있다. 구현 전에 해당 Phase 문서의 관련 절을 읽는다.
 
 ## 명령어
 - 테스트: `npm test`
@@ -39,10 +39,10 @@ Phase 1은 Virtual DOM, Diff, Patch이고, Phase 2는 Component, State, Hooks이
 ## 문서화
 - 내보내는 함수와 클래스에는 JSDoc을 작성한다.
 - `docs/api.md`는 자동 생성 파일이므로 직접 고치지 않는다.
-- 구조나 설계가 바뀌면 `docs/architecture.md`에 변경 내용과 이유를 적는다.
+- 구조나 설계가 바뀌면 해당 Phase의 설계 문서에 변경 내용과 이유를 적는다.
 
 ## 작업 분담
-- 설계는 메인 세션에서 사용자와 확정하고 `docs/architecture.md`에 기록한다.
+- 설계는 메인 세션에서 사용자와 확정하고 해당 Phase의 설계 문서에 기록한다.
 - HTML, CSS, 테스트 틀은 `ui-builder`에게 맡긴다.
 - Virtual DOM, Diff, Patch, Hook은 `core-builder`에게 맡긴다.
 - 구현 단위가 끝나면 `verifier`에게 검증을 맡긴다.
