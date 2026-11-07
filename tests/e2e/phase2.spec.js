@@ -110,3 +110,22 @@ test('시간이 지나면 멍때리기로 턴이 지나가고 계속 두면 번�
   for (let i = 0; i < 11; i += 1) await page.clock.runFor(20000);
   await expect(page.getByRole('heading', { name: '번아웃' })).toBeVisible();
 });
+
+test('1초가 지나면 관찰 패널에 숫자 변경 기록이 쌓인다', async ({ page }) => {
+  await page.clock.install();
+  await open(page);
+  await page.locator('#inspector summary').click();
+  await page.clock.runFor(1000);
+  await expect(page.locator('.inspector-log li').first()).toContainText('텍스트');
+  await expect(page.locator('.inspector-hooks')).toContainText('useState');
+  await expect(page.locator('.inspector-count')).toContainText('렌더');
+});
+
+test('관찰 패널을 접어도 게임이 동작한다', async ({ page }) => {
+  await open(page);
+  await page.locator('#inspector summary').click();
+  await page.locator('#inspector summary').click();
+  await expect(page.locator('details#inspector')).not.toHaveAttribute('open', /.*/);
+  await choose(page, '코딩');
+  await expect(page.locator('h2')).toHaveText('1일차 오후');
+});

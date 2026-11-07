@@ -226,6 +226,17 @@ deps가 같으면 <code>compute</code>를 실행하지 않고 저장한 값을 �
 <dt><a href="#getTitle">getTitle(stats)</a> ⇒ <code>string</code></dt>
 <dd><p>스탯으로 칭호를 고른다. 앞의 조건이 먼저이다.</p>
 </dd>
+<dt><a href="#describeHook">describeHook(hook, index)</a> ⇒ <code>string</code></dt>
+<dd><p><code>hooks</code> 칸 하나를 한 줄로 설명한다. 예: <code>0 useState: &quot;송&quot;</code>, <code>3 useEffect: deps [1]</code>.</p>
+</dd>
+<dt><a href="#visibleChanges">visibleChanges(changes)</a> ⇒ <code><a href="#Change">Array.&lt;Change&gt;</a></code></dt>
+<dd><p>패널에 보여 줄 변경만 남긴다. <code>PROPS</code>의 <code>set</code>에서 함수 값과 <code>remove</code>에서 <code>on</code>으로 시작하는 이름을 빼고,
+남는 내용이 없는 <code>PROPS</code>는 뺀다. 입력은 바꾸지 않는다.</p>
+</dd>
+<dt><a href="#createInspector">createInspector(container)</a> ⇒ <code>Object</code></dt>
+<dd><p>게임 옆의 관찰 패널을 만들어 바로 마운트한다. 패널은 Hook 없는 <code>FunctionComponent</code>이고 게임을 다시 렌더하지 않는다.
+렌더 횟수, <code>hooks</code> 칸, 최근 변경 8줄(최신이 위)을 보여 준다.</p>
+</dd>
 </dl>
 
 ## Typedefs
@@ -1019,6 +1030,45 @@ HTML 문자열을 루트 Virtual DOM으로 바꾼다.
 | Param | Type |
 | --- | --- |
 | stats | <code>Object</code> | 
+
+<a name="describeHook"></a>
+
+## describeHook(hook, index) ⇒ <code>string</code>
+`hooks` 칸 하나를 한 줄로 설명한다. 예: `0 useState: "송"`, `3 useEffect: deps [1]`.
+
+**Kind**: global function  
+**Returns**: <code>string</code> - 설명  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| hook | <code>Object</code> | 칸 |
+| index | <code>number</code> | `hooks` 배열에서의 위치 |
+
+<a name="visibleChanges"></a>
+
+## visibleChanges(changes) ⇒ [<code>Array.&lt;Change&gt;</code>](#Change)
+패널에 보여 줄 변경만 남긴다. `PROPS`의 `set`에서 함수 값과 `remove`에서 `on`으로 시작하는 이름을 빼고,
+남는 내용이 없는 `PROPS`는 뺀다. 입력은 바꾸지 않는다.
+
+**Kind**: global function  
+**Returns**: [<code>Array.&lt;Change&gt;</code>](#Change) - 보여 줄 변경 목록  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| changes | [<code>Array.&lt;Change&gt;</code>](#Change) | `diff`가 돌려준 변경 목록 |
+
+<a name="createInspector"></a>
+
+## createInspector(container) ⇒ <code>Object</code>
+게임 옆의 관찰 패널을 만들어 바로 마운트한다. 패널은 Hook 없는 `FunctionComponent`이고 게임을 다시 렌더하지 않는다.
+렌더 횟수, `hooks` 칸, 최근 변경 8줄(최신이 위)을 보여 준다.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - `record(changes, hooks)`로 게임의 한 번의 렌더를 기록한다.  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| container | <code>Element</code> | 패널을 그릴 영역 |
 
 <a name="Change"></a>
 
