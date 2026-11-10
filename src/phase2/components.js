@@ -72,7 +72,7 @@ export function PlayScreen({ game, title, timeLeft, onChoose, onDinner }) {
     h('div', { class: 'timer' }, `남은 시간 ${timeLeft}초`),
     h(StatBar, { stats: game.stats, title }),
     dinner
-      ? h('div', { class: 'choices' },
+      ? h('section', { class: 'choices' },
         h(ChoiceButton, { label: '회식 참석', onClick: () => onDinner(true) }),
         h(ChoiceButton, { label: '회식 불참', onClick: () => onDinner(false) }))
       : h('div', { class: 'choices' },

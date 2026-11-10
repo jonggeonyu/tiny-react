@@ -107,6 +107,34 @@ describe('선택과 타이머', () => {
     expect(timerText()).toContain('20');
   });
 
+  it('밤에 코딩을 고르고 회식이 열리면 회식 버튼은 이전 버튼과 다른 노드이다', async () => {
+    Math.random.mockReturnValue(0);
+    mountGame();
+    await startAs();
+    await choose('코딩', '코딩');
+    const old = [...container.querySelectorAll('button')].find((b) => b.textContent === '코딩');
+    await press('코딩');
+    const yes = [...container.querySelectorAll('button')].find((b) => b.textContent === '회식 참석');
+    expect(yes).toBeTruthy();
+    expect(container.contains(old)).toBe(false);
+    for (const b of container.querySelectorAll('.choices button')) expect(b).not.toBe(old);
+  });
+
+  it('회식에 답하면 다시 나온 선택지 버튼은 회식 버튼과 다른 노드이고 회식 버튼은 떨어져 나간다', async () => {
+    Math.random.mockReturnValue(0);
+    mountGame();
+    await startAs();
+    await choose('코딩', '코딩', '코딩');
+    const yes = [...container.querySelectorAll('button')].find((b) => b.textContent === '회식 참석');
+    const no = [...container.querySelectorAll('button')].find((b) => b.textContent === '회식 불참');
+    await press('회식 참석');
+    expect(container.contains(yes)).toBe(false);
+    expect(container.contains(no)).toBe(false);
+    const buttons = [...container.querySelectorAll('.choices button')];
+    expect(buttons.length).toBe(4);
+    for (const b of buttons) expect([yes, no]).not.toContain(b);
+  });
+
   it('회식 중 시간이 지나면 불참으로 처리되고 타이머는 하나만 남는다', async () => {
     Math.random.mockReturnValue(0);
     mountGame();

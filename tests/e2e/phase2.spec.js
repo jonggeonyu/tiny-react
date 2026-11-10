@@ -106,6 +106,19 @@ test('발표에서 한글을 치면 안내가 나오고 40초가 지나면 발�
   await expect(page.getByRole('heading', { name: '발표 폭망' })).toBeVisible();
 });
 
+test('밤에 키보드로 코딩을 고르면 회식 버튼에 포커스가 남지 않는다', async ({ page }) => {
+  await fixRandom(page, 0.1);
+  await page.goto('/phase2.html');
+  await start(page);
+  await choose(page, '코딩', '코딩');
+  await page.getByRole('button', { name: '코딩', exact: true }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: '회식 참석' })).toBeVisible();
+  expect(await page.evaluate(() => document.activeElement.textContent)).not.toBe('회식 참석');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: '회식 참석' })).toBeVisible();
+});
+
 test('코딩만 하면 번아웃이다', async ({ page }) => {
   await open(page);
   await choose(page, ...Array(7).fill('코딩'));

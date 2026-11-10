@@ -131,7 +131,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible {
 
 .stat-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
 .stat-title { grid-column: 1 / -1; white-space: nowrap; }
-.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+div.choices, section.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
 
 .event-log {
   margin: 0;
