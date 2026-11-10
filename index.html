@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>미니 리액트 - Virtual DOM 실험실</title>
+  <link rel="stylesheet" href="./page.css">
+  <!-- 초기 로드는 기존 src/main.js가 그대로 수행하고, page.js는 그 결과를 읽어 보여 주기만 한다. -->
+  <script type="module" src="./page.js"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <p class="eyebrow">MINI REACT / PHASE 01</p>
+      <h1>Virtual DOM 실험실</h1>
+      <p class="lede">실제 영역의 HTML을 Virtual DOM으로 읽어 테스트 영역 미리보기를 만듭니다. 편집 내용을 비교해 바뀐 부분만 실제 영역에 반영하는 단계는 순서대로 준비하고 있습니다.</p>
+      <ul class="legend" aria-label="표시 범례">
+        <li><span class="chip chip-live">동작</span> 지금 실제로 동작하는 기능</li>
+        <li><span class="chip chip-pending">준비 중</span> 자리만 잡아 둔 기능 · 조작할 수 없음</li>
+      </ul>
+    </header>
+
+    <section class="toolbar" aria-label="Patch와 변경 이력">
+      <div class="toolbar-group">
+        <button type="button" class="primary" disabled aria-disabled="true" title="준비 중인 기능입니다">Patch 적용 <span class="chip chip-pending">준비 중</span></button>
+        <button type="button" data-testid="refresh-preview-button">미리보기 갱신</button>
+      </div>
+      <span class="divider" aria-hidden="true"></span>
+      <div class="toolbar-group history" role="group" aria-label="변경 이력 이동">
+        <button type="button" data-testid="back-button" disabled title="이력 이동은 준비 중입니다">← 뒤로</button>
+        <span class="counter"><span class="counter-label">이력</span> <span data-testid="history-position">0 / 0</span></span>
+        <button type="button" data-testid="forward-button" disabled title="이력 이동은 준비 중입니다">앞으로 →</button>
+        <span class="history-limit" title="이력 보관 개수 제한은 준비 중입니다">최대 10개 보관 · 준비 중</span>
+      </div>
+    </section>
+
+    <div class="status-row">
+      <p id="lab-status" class="status" role="status" aria-live="polite">초기 콘텐츠를 불러오는 중입니다.</p>
+      <p data-testid="error-message" class="error" role="alert" hidden></p>
+    </div>
+
+    <div class="workspace">
+      <section class="panel" aria-labelledby="actual-title">
+        <div class="panel-heading">
+          <div class="panel-title"><span class="step">01</span><h2 id="actual-title">실제 영역</h2></div>
+          <span class="badge">Patch 결과</span>
+        </div>
+        <p class="hint">Patch가 성공했을 때만 바뀌는 영역입니다. 이곳의 입력값을 바꿔도 이력이나 미리보기에는 반영되지 않습니다.</p>
+        <div class="canvas actual" data-testid="actual-host"><template shadowrootmode="open"><style>:host { display: block; font: inherit; color: inherit; overflow-wrap: anywhere; } h2 { margin-top: 0; } input, textarea, select, button { max-width: 100%; font: inherit; }</style><div data-testid="content"><section><h2>오늘의 작은 목표</h2><p>Virtual DOM의 <strong>변화</strong>를 직접 확인해 보세요.</p><ul><li>HTML 수정하기</li><li>Patch 적용하기</li></ul><label for="memo">메모</label> <input id="memo" type="text" value="안녕하세요"></section></div></template></div>
+      </section>
+
+      <section class="panel" aria-labelledby="test-title">
+        <div class="panel-heading">
+          <div class="panel-title"><span class="step">02</span><h2 id="test-title">테스트 영역</h2></div>
+          <span class="badge accent">미리보기 · 편집기</span>
+        </div>
+
+        <div class="field-heading">
+          <label for="editor" class="label">HTML 편집기</label>
+          <span class="chip chip-live">수동 갱신</span>
+        </div>
+        <textarea id="editor" data-testid="html-editor" rows="9" spellcheck="false" aria-describedby="editor-help"></textarea>
+        <p id="editor-help" class="help">HTML을 편집한 뒤 미리보기 갱신을 눌러 주세요. 지원하는 태그·속성은 아래 안내를 참고하세요.</p>
+
+        <p data-testid="validation-errors" class="error" role="alert" hidden></p>
+        <p data-testid="validation-warnings" class="status" role="status" hidden></p>
+        <div data-testid="carry-over-dialog" role="dialog" aria-label="입력값 연결 확인" hidden>
+          <p data-testid="carry-over-description"></p>
+          <button type="button" data-testid="carry-over-continue">계속</button>
+          <button type="button" data-testid="carry-over-cancel">취소</button>
+        </div>
+        <p data-testid="preview-stale-notice" class="status" role="status" hidden>편집 내용이 반영되지 않았습니다. 미리보기를 갱신해 주세요.</p>
+
+        <div class="field-heading preview-heading">
+          <span class="label" id="preview-label">미리보기</span>
+          <span class="chip chip-live">초기 로드</span>
+        </div>
+        <div class="canvas preview" data-testid="preview-host" role="region" aria-labelledby="preview-label"><template shadowrootmode="open"><style>:host { display: block; font: inherit; color: inherit; overflow-wrap: anywhere; } h2 { margin-top: 0; } input, textarea, select, button { max-width: 100%; font: inherit; }</style></template></div>
+        <p class="help">미리보기의 입력값은 바꿀 수 있지만, 실제 영역이나 이력에 반영되지는 않습니다.</p>
+      </section>
+    </div>
+
+    <section class="panel compare" aria-labelledby="compare-title">
+      <div class="panel-heading">
+        <div class="panel-title"><span class="step">03</span><h2 id="compare-title">비교 결과</h2></div>
+        <label class="toggle is-pending" title="준비 중인 기능입니다"><input type="checkbox" disabled> 공백 표시 <span class="chip chip-pending">준비 중</span></label>
+      </div>
+      <p class="hint">현재 선택된 이력이 처음 저장될 때의 비교 결과를 보여 줍니다.</p>
+      <p class="comparison-notice" data-testid="comparison-result"></p>
+
+      <div class="compare-grid">
+        <article class="placeholder" aria-labelledby="html-diff-title">
+          <div class="placeholder-heading"><h3 id="html-diff-title">HTML 결과 비교</h3><span class="chip chip-pending">준비 중</span></div>
+          <p>이전 Patch 결과 HTML과 이번 Patch 결과 HTML을 나란히 놓고, 바뀐 글자를 <span class="mark-del">−</span> 빨강 · <span class="mark-add">+</span> 초록으로 표시합니다.</p>
+          <ul>
+            <li>변경 구간마다 앞뒤 3줄의 문맥과 이전·새 줄 번호</li>
+            <li><code>변경 구간 2개</code>, <code>이전 2줄 → 이후 1줄</code>처럼 구간 단위 요약</li>
+          </ul>
+        </article>
+        <article class="placeholder" aria-labelledby="vdom-diff-title">
+          <div class="placeholder-heading"><h3 id="vdom-diff-title">Virtual DOM Diff</h3><span class="chip chip-pending">준비 중</span></div>
+          <p>두 Virtual DOM을 같은 위치끼리 비교해 찾은 변경과 폼 상태 변경을 따로 셉니다. 변경이 없으면 <code>변경 없음</code>을 표시합니다.</p>
+          <ul>
+            <li>요소 추가·삭제·교체, 텍스트·속성·style 변경, 입력창의 현재 값·선택 변경</li>
+            <li><code>section 안의 두 번째 p 요소</code> 같은 위치 설명과 childNodes 경로</li>
+          </ul>
+        </article>
+      </div>
+      <p class="help">HTML 글자 비교와 Virtual DOM Diff는 기준이 서로 다른 별개의 결과이므로 건수가 달라도 오류가 아닙니다. HTML 색상만으로 실제 DOM에 반영된 작업을 판단하지 않습니다.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="tree-title">
+      <div class="panel-heading">
+        <div class="panel-title"><span class="step">04</span><h2 id="tree-title">Virtual DOM 살펴보기</h2></div>
+        <span class="chip chip-live">동작</span>
+      </div>
+      <p class="hint">현재 이력에 저장된 트리입니다. 대괄호는 공백 텍스트를 포함한 <code>childNodes</code> 기준 경로입니다.</p>
+      <div id="vdom-tree" class="tree" aria-live="polite"><p class="help">트리를 불러오는 중입니다.</p></div>
+    </section>
+
+    <details class="panel source-diff">
+      <summary>
+        <span class="panel-title"><span class="step">05</span><span class="summary-title">원본 HTML 비교</span></span>
+        <span class="chip chip-pending">준비 중</span>
+      </summary>
+      <p class="hint">Patch를 누른 시점의 편집 기준 HTML과 편집기에 작성한 HTML을 글자 단위로 비교합니다. 브라우저 직렬화로 바뀐 따옴표·들여쓰기와 달리 사용자가 직접 바꾼 표기를 확인하는 곳입니다.</p>
+      <div class="placeholder"><p>아직 구현되지 않았습니다. 검사에 오류가 있어도 비교는 표시하되 적용되지 않은 편집임을 함께 알릴 예정입니다.</p></div>
+    </details>
+
+    <section class="panel guide" aria-labelledby="guide-title">
+      <div class="panel-heading">
+        <div class="panel-title"><span class="step">06</span><h2 id="guide-title">안내</h2></div>
+      </div>
+      <div class="guide-grid">
+        <article>
+          <h3>Patch 흐름 <span class="chip chip-pending">준비 중</span></h3>
+          <ol class="flow">
+            <li>편집기 HTML 검사</li>
+            <li>필요하면 미리보기 갱신</li>
+            <li>새 트리 생성 · 이전 트리와 비교</li>
+            <li>변경 건수 확인 창</li>
+            <li>바뀐 부분만 실제 영역에 반영</li>
+            <li>성공하면 새 이력 저장</li>
+          </ol>
+          <p class="help">변경이 없으면 이력을 만들지 않고 알려 줍니다. 적용에 실패하면 이전 상태로 복구를 시도합니다.</p>
+        </article>
+        <article>
+          <h3>변경 이력</h3>
+          <p class="help">현재는 처음 불러올 때 초기 상태 하나만 이력으로 저장합니다. 아래 규칙은 Patch·이력 이동과 함께 준비 중이며 아직 동작하지 않습니다.</p>
+          <ul>
+            <li>초기 상태를 포함해 최근 10개까지 보관할 예정입니다. <span class="chip chip-pending">준비 중</span></li>
+            <li>과거 이력에서 새로 Patch하면 그 뒤의 이력을 지울 예정입니다. <span class="chip chip-pending">준비 중</span></li>
+            <li>적용하지 않은 편집이 있으면 이동 전에 확인할 예정입니다. <span class="chip chip-pending">준비 중</span></li>
+            <li>새로고침 뒤 임시 저장본을 복원할 예정입니다. <span class="chip chip-pending">준비 중</span></li>
+          </ul>
+        </article>
+        <article>
+          <h3>지원하는 HTML</h3>
+          <p class="tag-list"><code>div</code> <code>section</code> <code>p</code> <code>span</code> <code>strong</code> <code>em</code> <code>h1~h6</code> <code>ul</code> <code>ol</code> <code>li</code> <code>input</code> <code>textarea</code> <code>select</code> <code>option</code> <code>button</code> <code>label</code></p>
+          <p class="help">공통 속성 <code>id</code> <code>class</code> <code>title</code> <code>style</code>. <code>input</code>은 text·checkbox·radio만 지원합니다. 스크립트·이벤트 속성·주석·<code>&lt;style&gt;</code>은 지원하지 않습니다.</p>
+        </article>
+        <article>
+          <h3>style 속성</h3>
+          <p class="help">허용 목록에 있는 선언만 사용할 수 있습니다: <code>color</code>, <code>background-color</code>(색 이름·#16진), <code>font-size</code>·<code>width</code>·<code>height</code>·<code>margin</code>·<code>padding</code>(px 하나), <code>font-weight</code>, <code>text-align</code>, <code>display</code>, <code>white-space</code>.</p>
+        </article>
+      </div>
+    </section>
+
+    <footer>위치 기반 비교 · 바닐라 JavaScript</footer>
+  </main>
+</body>
+</html>

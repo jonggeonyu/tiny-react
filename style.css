@@ -1,0 +1,8 @@
+﻿:root { font-family: system-ui, sans-serif; color: #1c2734; background: #f3f6fa; }
+body { margin: 0; }
+main { max-width: 1100px; margin: auto; padding: 2rem; }
+.areas { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+.areas section { background: white; border: 1px solid #d5dce5; border-radius: 8px; padding: 1rem; }
+textarea { display: block; box-sizing: border-box; width: 100%; margin: .5rem 0 1rem; font-family: monospace; }
+.history { display: flex; align-items: center; gap: .75rem; }
+[data-testid="error-message"] { color: #a32222; }
