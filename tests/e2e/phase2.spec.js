@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { fixRandom } from './helpers.js';
+import { fixRandom, freezeClock } from './helpers.js';
 
 test('Phase 2 페이지에 게임 영역과 관찰 패널이 있다', async ({ page }) => {
   await page.goto('/phase2.html');
@@ -94,7 +94,7 @@ test('틀린 글자는 ×로 보이고 넘기기는 입력을 비우고 다음 �
 });
 
 test('발표에서 한글을 치면 안내가 나오고 40초가 지나면 발표 폭망이다', async ({ page }) => {
-  await page.clock.install();
+  await freezeClock(page);
   await open(page);
   await reachPresentation(page);
   await expect(page.locator('.typing-input')).toBeFocused();
@@ -140,7 +140,7 @@ test('집에 다섯 번 가면 그냥 집에 감이고 다시 하기는 이름�
 });
 
 test('시간이 지나면 멍때리기로 턴이 지나가고 계속 두면 번아웃이다', async ({ page }) => {
-  await page.clock.install();
+  await freezeClock(page);
   await open(page);
   await page.clock.runFor(20000);
   await expect(page.locator('.event-log')).toContainText('모니터만 보다가');
@@ -150,7 +150,7 @@ test('시간이 지나면 멍때리기로 턴이 지나가고 계속 두면 번�
 });
 
 test('1초가 지나면 관찰 패널에 숫자 변경 기록이 쌓인다', async ({ page }) => {
-  await page.clock.install();
+  await freezeClock(page);
   await open(page);
   await page.locator('#inspector summary').click();
   await page.clock.runFor(1000);
