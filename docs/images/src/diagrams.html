@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>README 다이어그램</title>
+<!-- README의 그림 원본. `node docs/images/src/render.mjs`로 .fig마다 docs/images/<id>.png를 만든다. -->
+<style>
+  :root {
+    --ink: #0c0c0c;
+    --ink2: #5c5c5c;
+    --ink3: #a0a0a0;
+    --line: #e3e3e3;
+    --orange: #ff5d00;
+    --orange-soft: #fde8dc;
+    --orange-bg: #fff3ea;
+    --mono: Consolas, 'D2Coding', monospace;
+  }
+  body { margin: 0; padding: 20px; background: #ececec; font-family: Pretendard, 'Noto Sans KR', sans-serif; color: var(--ink); }
+  .fig { position: relative; width: 1200px; box-sizing: border-box; padding: 40px 48px 32px; margin: 0 0 20px; background: #fff; }
+  .fig h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.01em; }
+  .lead { margin: 8px 0 28px; font-size: 15px; color: var(--ink2); }
+  .lead code, .s code, .sub { font-family: var(--mono); }
+
+  .colhead { padding-bottom: 12px; margin-bottom: 24px; border-bottom: 2px solid var(--ink); }
+  .colhead .no { margin-right: 10px; font-size: 22px; font-weight: 800; color: var(--orange); }
+  .colhead .name { font-size: 20px; font-weight: 800; }
+  .colhead .sub { margin-top: 8px; font-size: 13px; color: var(--ink2); }
+
+  .box { position: relative; box-sizing: border-box; padding: 12px 18px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; }
+  .box.row { display: flex; align-items: center; gap: 10px; height: 58px; padding: 0 18px; }
+  .box.hl { border: 2px solid var(--orange); }
+  .box.fill { border: 2px solid var(--orange); background: var(--orange-bg); }
+  .box.ghost { border-style: dashed; color: var(--ink3); }
+  .box.center { text-align: center; }
+  .t { font-size: 16px; font-weight: 700; }
+  .s { margin-top: 4px; font-size: 13px; color: var(--ink2); }
+  .ghost .t, .ghost .s { color: var(--ink3); font-weight: 500; }
+  .idx { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--orange); }
+
+  .pill { display: inline-block; padding: 3px 12px; border-radius: 999px; background: var(--orange-soft); color: var(--orange); font-size: 13px; font-weight: 700; }
+  .pill.solid { background: var(--orange); color: #fff; }
+  .pill.gray { background: #f0f0f0; color: #7a7a7a; }
+
+  .note { display: flex; align-items: center; gap: 12px; margin-top: 32px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 15px; }
+  .note::before { content: ''; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--orange); }
+
+  /* 화살표 층: JS가 상자 위치를 읽어 그린다 */
+  .overlay { position: absolute; inset: 0; pointer-events: none; }
+  .overlay svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .lbl { position: absolute; padding: 2px 6px; background: #fff; font-size: 13px; color: var(--ink2); white-space: nowrap; }
+  .lbl.orange { color: var(--orange); font-weight: 600; }
+
+  /* 자주 쓰는 배치 */
+  .pair { display: grid; grid-template-columns: 340px 1fr 340px; row-gap: 18px; }
+  .pair > .colhead { grid-row: 1; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; column-gap: 72px; }
+  .tree { display: flex; flex-direction: column; align-items: center; gap: 44px; }
+  .tree .kids { display: flex; gap: 14px; width: 100%; justify-content: center; }
+  .tree .kids .box { flex: 1; }
+  .stack { display: flex; flex-direction: column; gap: 40px; }
+</style>
+</head>
+<body>
+
+<!-- 1 -->
+<section class="fig" id="diff-key-none">
+  <h1>key 없음 → 번호로 짝짓기</h1>
+  <p class="lead">tiny-react의 diff는 같은 번호의 자식끼리 비교한다</p>
+  <div class="pair">
+    <div class="colhead" style="grid-column:1"><span class="name">이전 Virtual DOM</span><div class="sub">['사과', '우유', '빵']</div></div>
+    <div class="colhead" style="grid-column:3"><span class="name">새 Virtual DOM</span><div class="sub">['우유', '빵']</div></div>
+    <div class="box row" data-n="o0" style="grid-column:1"><span class="idx">0</span><span class="t">li 사과</span></div>
+    <div class="box row hl" data-n="n0" style="grid-column:3"><span class="idx">0</span><span class="t">li 우유</span></div>
+    <div class="box row" data-n="o1" style="grid-column:1"><span class="idx">1</span><span class="t">li 우유</span></div>
+    <div class="box row hl" data-n="n1" style="grid-column:3"><span class="idx">1</span><span class="t">li 빵</span></div>
+    <div class="box row" data-n="o2" style="grid-column:1"><span class="idx">2</span><span class="t">li 빵</span></div>
+    <div class="box row ghost" data-n="n2" style="grid-column:3"><span class="t">삭제</span></div>
+  </div>
+  <div class="note">변경 3건 · 앞에서 지우면 그 위치부터 끝까지 전부 바뀐다</div>
+</section>
+
+<!-- 2 -->
+<section class="fig" id="diff-key-with">
+  <h1>key 있음 → 이름표로 짝짓기</h1>
+  <p class="lead">실제 React는 같은 key끼리 비교한다 (tiny-react에는 구현하지 않음)</p>
+  <div class="pair">
+    <div class="colhead" style="grid-column:1"><span class="name">이전 Virtual DOM</span><div class="sub">key: apple, milk, bread</div></div>
+    <div class="colhead" style="grid-column:3"><span class="name">새 Virtual DOM</span><div class="sub">key: milk, bread</div></div>
+    <div class="box row" data-n="o0" style="grid-column:1"><span class="idx">apple</span><span class="t">li 사과</span></div>
+    <div class="box row ghost" data-n="n0" style="grid-column:3"><span class="t">(없음)</span></div>
+    <div class="box row" data-n="o1" style="grid-column:1"><span class="idx">milk</span><span class="t">li 우유</span></div>
+    <div class="box row" data-n="n1" style="grid-column:3"><span class="idx">milk</span><span class="t">li 우유</span></div>
+    <div class="box row" data-n="o2" style="grid-column:1"><span class="idx">bread</span><span class="t">li 빵</span></div>
+    <div class="box row" data-n="n2" style="grid-column:3"><span class="idx">bread</span><span class="t">li 빵</span></div>
+  </div>
+  <div class="note">변경 1건 · 사과 노드만 지우고, 우유와 빵 노드는 그대로 둔다</div>
+</section>
+
+<!-- 3 -->
+<section class="fig" id="diff-dom-state">
+  <h1>체크가 다른 항목으로 넘어가는 과정</h1>
+  <p class="lead">key 없음의 변경 목록이 재사용하는 DOM 노드에 그대로 적용된다</p>
+  <div style="display:grid;grid-template-columns:270px 1fr 270px 1fr 270px;row-gap:18px">
+    <div class="colhead" style="grid-column:1"><span class="name">변경 목록</span><div class="sub">diff 결과</div></div>
+    <div class="colhead" style="grid-column:3"><span class="name">실제 DOM 노드</span><div class="sub">재사용</div></div>
+    <div class="colhead" style="grid-column:5"><span class="name">화면</span><div class="sub">사용자가 보는 것</div></div>
+
+    <div class="box row" data-n="c0" style="grid-column:1"><span class="pill solid">TEXT</span><span class="t">우유</span></div>
+    <div class="box row hl" data-n="d0" style="grid-column:3"><span class="t">노드 A</span><span class="s" style="margin:0">체크 ✓ 그대로</span></div>
+    <div class="box row fill" data-n="v0" style="grid-column:5"><span class="t">[✓] 우유</span></div>
+
+    <div class="box row" data-n="c1" style="grid-column:1"><span class="pill solid">TEXT</span><span class="t">빵</span></div>
+    <div class="box row" data-n="d1" style="grid-column:3"><span class="t">노드 B</span></div>
+    <div class="box row" data-n="v1" style="grid-column:5"><span class="t">[ ] 빵</span></div>
+
+    <div class="box row" data-n="c2" style="grid-column:1"><span class="pill">REMOVE</span></div>
+    <div class="box row" data-n="d2" style="grid-column:3"><span class="t">노드 C</span></div>
+    <div class="box row ghost" data-n="v2" style="grid-column:5"><span class="t">삭제</span></div>
+  </div>
+  <div class="note">체크, 입력 중인 글자, 포커스는 DOM 노드에 붙어 있어서, 글자만 바뀌면 다른 항목에 남는다</div>
+</section>
+
+<!-- 4 -->
+<section class="fig" id="state-hooks-shift">
+  <h1>칸이 어긋나는 과정</h1>
+  <p class="lead">자식의 Hook을 허용한다고 가정 (실제로는 오류로 차단)</p>
+  <div class="pair">
+    <div class="colhead" style="grid-column:1"><span class="name">첫 렌더</span><div class="sub">사과 완료 체크</div></div>
+    <div class="colhead" style="grid-column:3"><span class="name">사과 삭제 뒤</span><div class="sub">Item 빵만 남음</div></div>
+    <div class="box row" data-n="o0" style="grid-column:1"><span class="idx">hooks[0]</span><span class="t">items</span></div>
+    <div class="box row" data-n="n0" style="grid-column:3"><span class="idx">hooks[0]</span><span class="t">items</span></div>
+    <div class="box row" data-n="o1" style="grid-column:1"><span class="idx">hooks[1]</span><span class="t">사과의 done = true</span></div>
+    <div class="box row fill" data-n="n1" style="grid-column:3"><span class="idx">hooks[1]</span><span class="t">빵이 읽음 → done = true</span></div>
+    <div class="box row" data-n="o2" style="grid-column:1"><span class="idx">hooks[2]</span><span class="t">빵의 done = false</span></div>
+    <div class="box row ghost" data-n="n2" style="grid-column:3"><span class="idx" style="color:var(--ink3)">hooks[2]</span><span class="t">아무도 안 읽음</span></div>
+  </div>
+  <div class="note">빵은 완료한 적이 없는데 완료로 표시 · 상태를 "몇 번째 칸인지"로만 구분하기 때문</div>
+</section>
+
+<!-- 5 -->
+<section class="fig" id="state-location">
+  <h1>상태가 사는 곳</h1>
+  <p class="lead">실제 React는 컴포넌트마다 State를 가지고, tiny-react는 루트에만 가진다</p>
+  <div class="two">
+    <div>
+      <div class="colhead"><span class="name">실제 React</span><div class="sub">컴포넌트마다 State</div></div>
+      <div class="tree">
+        <div class="box center" data-n="ra" style="width:240px"><div class="t">App</div><div class="s"><span class="pill">State: items</span></div></div>
+        <div class="kids" style="padding:0 60px;box-sizing:border-box">
+          <div class="box center" data-n="rb"><div class="t">Item 사과</div><div class="s"><span class="pill">State: done</span></div></div>
+          <div class="box center" data-n="rc"><div class="t">Item 빵</div><div class="s"><span class="pill">State: done</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="colhead"><span class="name">tiny-react</span><div class="sub">루트에만 State</div></div>
+      <div class="tree">
+        <div class="box center fill" data-n="ta" style="width:240px"><div class="t">Game</div><div class="s"><span class="pill solid">hooks 13칸 전부</span></div></div>
+        <div class="kids">
+          <div class="box center" data-n="tb"><div class="t">StatBar</div><div class="s"><span class="pill gray">Props만</span></div></div>
+          <div class="box center" data-n="tc"><div class="t">ChoiceButton</div><div class="s"><span class="pill gray">Props만</span></div></div>
+          <div class="box center" data-n="td"><div class="t">EventLog</div><div class="s"><span class="pill gray">Props만</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note">tiny-react는 모든 상태를 루트로 올린다 (Lifting State Up)</div>
+</section>
+
+<!-- 6 -->
+<section class="fig" id="state-timer-scope">
+  <h1>타이머 1초마다 다시 실행되는 범위</h1>
+  <p class="lead">실제로 바뀌는 것은 남은 시간 숫자 하나</p>
+  <div class="two">
+    <div>
+      <div class="colhead"><span class="name">tiny-react</span><div class="sub">Game 전체 실행, 화면 전체 Diff</div></div>
+      <div class="tree">
+        <div class="box center fill" data-n="g" style="width:200px"><div class="t">Game</div></div>
+        <div class="kids">
+          <div class="box center fill" data-n="a"><div class="t">StatBar</div></div>
+          <div class="box center fill" data-n="b"><div class="t">선택지</div></div>
+          <div class="box center fill" data-n="c"><div class="t">타이머 표시</div></div>
+          <div class="box center fill" data-n="d"><div class="t">EventLog</div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="colhead"><span class="name">실제 React</span><div class="sub">남은 시간을 Timer가 가지면</div></div>
+      <div class="tree">
+        <div class="box center" data-n="g2" style="width:200px"><div class="t">Game</div></div>
+        <div class="kids">
+          <div class="box center" data-n="a2"><div class="t">StatBar</div></div>
+          <div class="box center" data-n="b2"><div class="t">선택지</div></div>
+          <div class="box center fill" data-n="c2"><div class="t">Timer</div></div>
+          <div class="box center" data-n="d2"><div class="t">EventLog</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note">주황색: 1초마다 다시 실행되는 컴포넌트</div>
+</section>
+
+<!-- 7 -->
+<section class="fig" id="avoid-append-only">
+  <h1>목록은 끝에만 추가</h1>
+  <p class="lead">게임의 사건 기록은 항상 끝에 쌓인다</p>
+  <div class="pair">
+    <div class="colhead" style="grid-column:1"><span class="name">이전 기록</span><div class="sub">log.length = 2</div></div>
+    <div class="colhead" style="grid-column:3"><span class="name">새 기록</span><div class="sub">log.length = 3</div></div>
+    <div class="box row" data-n="o0" style="grid-column:1"><span class="idx">0</span><span class="t">빌드가 돌았다</span></div>
+    <div class="box row" data-n="n0" style="grid-column:3"><span class="idx">0</span><span class="t">빌드가 돌았다</span></div>
+    <div class="box row" data-n="o1" style="grid-column:1"><span class="idx">1</span><span class="t">옥상에서 상담</span></div>
+    <div class="box row" data-n="n1" style="grid-column:3"><span class="idx">1</span><span class="t">옥상에서 상담</span></div>
+    <div style="grid-column:2;display:flex;align-items:center;justify-content:center"><span class="pill solid" data-n="add">ADD</span></div>
+    <div class="box row fill" data-n="n2" style="grid-column:3"><span class="idx">2</span><span class="t">이불 속이 천국</span></div>
+  </div>
+  <div class="note">앞쪽 번호가 그대로라 비교 결과는 끝의 ADD 하나</div>
+</section>
+
+<!-- 8 -->
+<section class="fig" id="avoid-wrapper-tag">
+  <h1>감싸는 태그를 다르게</h1>
+  <p class="lead">선택지 4개가 회식 버튼 2개로 바뀌는 순간</p>
+  <div class="two">
+    <div>
+      <div class="colhead"><span class="name">같은 태그</span><div class="sub">div → div</div></div>
+      <div class="stack">
+        <div class="box" data-n="x1"><div class="t">type 같음</div></div>
+        <div class="box" data-n="x2"><div class="t">자식끼리 번호로 비교</div></div>
+        <div class="box" data-n="x3"><div class="t">코딩 버튼 노드의 글자만 '회식 참석'으로 변경</div></div>
+        <div class="box" data-n="x4"><div class="t">포커스 그대로 → Enter 한 번에 참석</div></div>
+      </div>
+    </div>
+    <div>
+      <div class="colhead"><span class="name">다른 태그</span><div class="sub">div → section</div></div>
+      <div class="stack">
+        <div class="box" data-n="y1"><div class="t">type 다름</div></div>
+        <div class="box hl" data-n="y2"><div class="t"><span class="pill solid">REPLACE</span></div></div>
+        <div class="box" data-n="y3"><div class="t">회식 버튼을 새 노드로 생성</div></div>
+        <div class="box fill" data-n="y4"><div class="t">이전 버튼은 문서에서 사라짐 → 포커스 없음</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="note">type이 다르면 자식을 비교하지 않고 통째로 교체한다</div>
+</section>
+
+<!-- 9 -->
+<section class="fig" id="avoid-input-position">
+  <h1>입력창은 바뀌는 목록 밖에 배치</h1>
+  <p class="lead">발표 화면의 자식 번호</p>
+  <div style="display:grid;grid-template-columns:repeat(6,1fr);column-gap:14px;row-gap:48px">
+    <div style="grid-column:1/7;display:flex;justify-content:center">
+      <div class="box center" data-n="root" style="width:300px"><div class="t" style="font-family:var(--mono)">div.presentation-screen</div></div>
+    </div>
+    <div class="box center" data-n="c0"><div class="idx">0</div><div class="t">h2</div><div class="s">발표 2/5</div></div>
+    <div class="box center" data-n="c1"><div class="idx">1</div><div class="t">div</div><div class="s">남은 시간</div></div>
+    <div class="box center" data-n="c2"><div class="idx">2</div><div class="t">p</div><div class="s">설명</div></div>
+    <div class="box center hl" data-n="c3"><div class="idx">3</div><div class="t">p.target-name</div><div class="s">글자 칸 묶음</div></div>
+    <div class="box center fill" data-n="c4"><div class="idx">4</div><div class="t">input</div><div class="s">입력창 · 항상 4번</div></div>
+    <div class="box center" data-n="c5"><div class="idx">5</div><div class="t">button</div><div class="s">넘기기</div></div>
+    <div style="grid-column:3/5;display:flex;gap:12px">
+      <div class="box center" data-n="s1" style="flex:1"><div class="t" style="font-family:var(--mono)">span u</div></div>
+      <div class="box center" data-n="s2" style="flex:1"><div class="t" style="font-family:var(--mono)">span s</div></div>
+      <div class="box center ghost" data-n="s3" style="flex:1"><div class="t" style="font-family:var(--mono)">span e …</div></div>
+    </div>
+  </div>
+  <div class="note">글자 칸은 p.target-name 안에서만 늘고 줄어든다 → 입력창 번호가 고정되어 포커스 유지</div>
+</section>
+
+<!-- 10 -->
+<section class="fig" id="fix-key-flow">
+  <h1>key 비교를 구현한다면</h1>
+  <p class="lead">diff, patch, 변경 형식을 모두 바꿔야 한다 → Phase 1 구조 변경</p>
+  <div style="display:grid;grid-template-columns:1fr 1.25fr 1fr;column-gap:80px">
+    <div>
+      <div class="colhead"><span class="no">01</span><span class="name">표 만들기</span><div class="sub">Map(key → 이전 자식)</div></div>
+      <div class="stack">
+        <div class="box" data-n="a1"><div class="t">새 자식 목록</div><div class="s">새 Virtual DOM의 children</div></div>
+        <div class="box hl" data-n="a2"><div class="t">key → 노드 표</div><div class="s">이전 자식으로 생성</div></div>
+      </div>
+    </div>
+    <div>
+      <div class="colhead"><span class="no">02</span><span class="name">짝짓기</span><div class="sub">새 자식마다 같은 key 찾기</div></div>
+      <div class="stack" style="gap:56px">
+        <div class="box center hl" data-n="q"><div class="t">같은 key가 표에 있나?</div></div>
+        <div style="display:flex;gap:16px">
+          <div class="box" data-n="yes" style="flex:1"><div class="t">있음 <span class="pill">MOVE</span></div><div class="s">diffNode 뒤 자리 이동</div></div>
+          <div class="box" data-n="no" style="flex:1"><div class="t">없음 <span class="pill">INSERT</span></div><div class="s">N번째 앞에 넣기</div></div>
+        </div>
+        <div class="box" data-n="rest"><div class="t">표에 남은 이전 자식 <span class="pill">REMOVE</span></div></div>
+      </div>
+    </div>
+    <div>
+      <div class="colhead"><span class="no">03</span><span class="name">반영</span><div class="sub">patch(영역, 변경 목록)</div></div>
+      <div class="box fill" data-n="p"><div class="t">번호 대신 노드 참조로</div><div class="s"><code>insertBefore(node, ref)</code></div><div class="s"><code>node.remove()</code></div></div>
+    </div>
+  </div>
+  <div class="note">지금은 끝에 붙이는 appendChild만 있어서, 원하는 자리 앞에 넣는 INSERT와 기존 노드를 옮기는 MOVE가 필요하다</div>
+</section>
+
+<!-- 11 -->
+<section class="fig" id="avoid-props-flow">
+  <h1>값은 내려가고 사건은 올라감</h1>
+  <p class="lead">자식은 Props만 받아 그리고, 클릭은 받은 함수를 불러 루트에 알린다</p>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:60px;width:760px;margin-left:100px">
+    <div class="box center fill" data-n="game" style="width:280px"><div class="t">Game (루트)</div><div class="s">State와 Hook 전부</div></div>
+    <div class="box center" data-n="play" style="width:280px"><div class="t">PlayScreen</div></div>
+    <div style="display:flex;gap:160px">
+      <div class="box center" data-n="stat" style="width:240px"><div class="t">StatBar</div></div>
+      <div class="box center" data-n="btn" style="width:240px"><div class="t">ChoiceButton</div></div>
+    </div>
+  </div>
+  <div class="note">값은 Props로 위에서 아래로, 사건은 함수 호출로 아래에서 위로</div>
+</section>
+
+<!-- 12 -->
+<section class="fig" id="avoid-usememo">
+  <h1>무거운 계산 보호</h1>
+  <p class="lead"><code>useMemo(() =&gt; getTitle(game.stats), [game.stats])</code></p>
+  <div style="display:grid;grid-template-columns:240px 300px 300px;column-gap:110px;align-items:center">
+    <div class="box" data-n="tick"><div class="t">1초 경과</div><div class="s">Game 다시 실행</div></div>
+    <div class="box center hl" data-n="q"><div class="t">stats가 지난번과 같나?</div></div>
+    <div class="stack" style="gap:28px">
+      <div class="box fill" data-n="same"><div class="t">저장한 칭호 그대로</div><div class="s">계산 생략</div></div>
+      <div class="box" data-n="diff"><div class="t">getTitle 다시 계산</div><div class="s">새 칭호 저장</div></div>
+    </div>
+  </div>
+  <div class="note">타이머 때문에 매초 Game이 다시 실행돼도, 칭호는 stats가 바뀔 때만 계산한다</div>
+</section>
+
+<!-- 13 -->
+<section class="fig" id="fix-component-hooks">
+  <h1>컴포넌트마다 hooks를 둔다면</h1>
+  <p class="lead">인스턴스마다 hooks를 가지고, key로 인스턴스를 찾는다</p>
+  <div class="tree" style="width:820px;margin:0 auto;gap:60px">
+    <div class="box center" data-n="app" style="width:260px"><div class="t">App 인스턴스</div><div class="s"><code>hooks: items</code></div></div>
+    <div class="kids">
+      <div class="box center" data-n="apple"><div class="t">Item <span class="idx">key=apple</span></div><div class="s"><code>hooks: done=true</code></div></div>
+      <div class="box center fill" data-n="milk"><div class="t">Item <span class="idx">key=milk</span></div><div class="s"><code>hooks: done=false</code></div></div>
+      <div class="box center" data-n="bread"><div class="t">Item <span class="idx">key=bread</span></div><div class="s"><code>hooks: done=false</code></div></div>
+    </div>
+    <div class="box center hl" data-n="set" style="width:260px"><div class="t"><code>setDone(true)</code></div><div class="s">우유의 체크</div></div>
+  </div>
+  <div class="note">우유의 상태가 바뀌면 우유 Item만 다시 실행 (주황색) · 사과를 지워도 빵은 자기 hooks를 유지</div>
+</section>
+
+<script>
+  const COLOR = { ink: '#0c0c0c', orange: '#ff5d00', gray: '#c4c4c4' };
+  const NS = 'http://www.w3.org/2000/svg';
+
+  function draw(id, fn) {
+    const fig = document.getElementById(id);
+    const layer = document.createElement('div');
+    layer.className = 'overlay';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.innerHTML = '<defs>' + Object.entries(COLOR).map(([name, c]) =>
+      `<marker id="${id}-${name}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="${c}"/></marker>`).join('') + '</defs>';
+    layer.appendChild(svg);
+    fig.appendChild(layer);
+    const f = fig.getBoundingClientRect();
+    const box = (n) => {
+      const el = fig.querySelector(`[data-n="${n}"]`);
+      if (!el) throw new Error(`${id}: ${n} 없음`);
+      const r = el.getBoundingClientRect();
+      const l = r.left - f.left, t = r.top - f.top;
+      return { l, t, r: l + r.width, b: t + r.height, cx: l + r.width / 2, cy: t + r.height / 2 };
+    };
+    const path = (d, { color = 'ink', dash, head = true } = {}) => {
+      const p = document.createElementNS(NS, 'path');
+      p.setAttribute('d', d);
+      p.setAttribute('fill', 'none');
+      p.setAttribute('stroke', COLOR[color]);
+      p.setAttribute('stroke-width', '2');
+      if (dash) p.setAttribute('stroke-dasharray', '6 5');
+      if (head) p.setAttribute('marker-end', `url(#${id}-${color})`);
+      svg.appendChild(p);
+    };
+    const label = (html, x, y, { anchor = 'above', orange } = {}) => {
+      const d = document.createElement('div');
+      d.className = 'lbl' + (orange ? ' orange' : '');
+      d.innerHTML = html;
+      d.style.left = x + 'px';
+      d.style.top = y + 'px';
+      d.style.transform = { above: 'translate(-50%, calc(-100% - 4px))', right: 'translate(8px, -50%)', left: 'translate(calc(-100% - 8px), -50%)' }[anchor];
+      layer.appendChild(d);
+    };
+    const G = 8;
+    const api = {
+      // 상자 a에서 b로: b가 오른쪽이면 가로, 아니면 세로. 중심이 어긋나면 가운데에서 한 번 꺾는다
+      arrow(a, b, opts = {}) {
+        const A = box(a), B = box(b);
+        const orange = opts.color === 'orange';
+        if (B.l >= A.r - 1) {
+          const x1 = A.r + G, x2 = B.l - G, mx = (x1 + x2) / 2;
+          const bent = Math.abs(A.cy - B.cy) > 1;
+          path(bent ? `M${x1},${A.cy} H${mx} V${B.cy} H${x2}` : `M${x1},${A.cy} H${x2}`, opts);
+          if (opts.label) label(opts.label, bent ? (mx + x2) / 2 : mx, B.cy, { anchor: 'above', orange });
+          return;
+        }
+        const down = B.t >= A.b - 1;
+        const y1 = down ? A.b + G : A.t - G, y2 = down ? B.t - G : B.b + G, my = (y1 + y2) / 2;
+        const bent = Math.abs(A.cx - B.cx) > 1;
+        path(bent ? `M${A.cx},${y1} V${my} H${B.cx} V${y2}` : `M${A.cx},${y1} V${y2}`, opts);
+        if (opts.label) label(opts.label, bent ? (A.cx + B.cx) / 2 : A.cx, my, { anchor: bent ? 'above' : (opts.at ?? 'right'), orange });
+      },
+      // 부모 아래에서 자식들 위로 꺾인 연결선
+      tree(p, kids, opts = {}) {
+        const P = box(p), K = kids.map(box);
+        const mid = P.b + (Math.min(...K.map((k) => k.t)) - P.b) / 2;
+        let d = `M${P.cx},${P.b} V${mid} M${Math.min(...K.map((k) => k.cx))},${mid} H${Math.max(...K.map((k) => k.cx))}`;
+        K.forEach((k) => { d += ` M${k.cx},${mid} V${k.t}`; });
+        path(d, { color: 'gray', head: false, ...opts });
+      },
+      // a의 오른쪽에서 나와 b의 오른쪽으로 돌아 들어가는 선
+      loop(a, b, opts = {}) {
+        const A = box(a), B = box(b);
+        const x = Math.max(A.r, B.r) + (opts.out ?? 60);
+        path(`M${A.r + G},${A.cy} H${x} V${B.cy} H${B.r + G}`, opts);
+        if (opts.label) label(opts.label, x, (A.cy + B.cy) / 2, { anchor: 'right', orange: opts.color === 'orange' });
+      },
+    };
+    fn(api);
+  }
+
+  document.fonts.ready.then(() => {
+    draw('diff-key-none', (g) => {
+      g.arrow('o0', 'n0', { label: '0번끼리 · <span class="pill solid">TEXT</span>' });
+      g.arrow('o1', 'n1', { label: '1번끼리 · <span class="pill solid">TEXT</span>' });
+      g.arrow('o2', 'n2', { label: '짝 없음 · <span class="pill">REMOVE</span>', dash: true, color: 'gray' });
+    });
+    draw('diff-key-with', (g) => {
+      g.arrow('o0', 'n0', { label: '짝 없음 · <span class="pill">REMOVE</span>', dash: true, color: 'gray' });
+      g.arrow('o1', 'n1', { label: '같은 key · <span class="pill gray">그대로</span>' });
+      g.arrow('o2', 'n2', { label: '같은 key · <span class="pill gray">그대로</span>' });
+    });
+    draw('diff-dom-state', (g) => {
+      for (const i of [0, 1, 2]) g.arrow(`c${i}`, `d${i}`, { color: i === 0 ? 'orange' : 'ink' });
+      g.arrow('d0', 'v0', { color: 'orange', label: '체크가 우유로', });
+      g.arrow('d1', 'v1');
+      g.arrow('d2', 'v2', { dash: true, color: 'gray' });
+    });
+    draw('state-hooks-shift', (g) => {
+      g.arrow('o0', 'n0', { dash: true, color: 'gray' });
+      g.arrow('o1', 'n1', { dash: true, color: 'orange', label: '같은 번호' });
+      g.arrow('o2', 'n2', { dash: true, color: 'gray' });
+    });
+    draw('state-location', (g) => {
+      g.tree('ra', ['rb', 'rc']);
+      g.tree('ta', ['tb', 'tc', 'td']);
+    });
+    draw('state-timer-scope', (g) => {
+      g.tree('g', ['a', 'b', 'c', 'd']);
+      g.tree('g2', ['a2', 'b2', 'c2', 'd2']);
+    });
+    draw('avoid-append-only', (g) => {
+      g.arrow('o0', 'n0', { label: '같음' });
+      g.arrow('o1', 'n1', { label: '같음' });
+      g.arrow('add', 'n2', { color: 'orange' });
+    });
+    draw('avoid-wrapper-tag', (g) => {
+      for (const s of ['x', 'y']) for (const i of [1, 2, 3]) g.arrow(`${s}${i}`, `${s}${i + 1}`, { color: s === 'y' ? 'orange' : 'ink' });
+    });
+    draw('avoid-input-position', (g) => {
+      g.tree('root', ['c0', 'c1', 'c2', 'c3', 'c4', 'c5']);
+      g.tree('c3', ['s1', 's2', 's3']);
+    });
+    draw('fix-key-flow', (g) => {
+      g.arrow('a1', 'a2');
+      g.arrow('a2', 'q');
+      g.arrow('q', 'yes', { label: '있음' });
+      g.arrow('q', 'no', { label: '없음' });
+      g.arrow('yes', 'rest');
+      g.arrow('no', 'rest');
+      g.arrow('rest', 'p', { color: 'orange' });
+    });
+    draw('avoid-props-flow', (g) => {
+      g.arrow('game', 'play', { label: '<code>game, timeLeft</code>' });
+      g.arrow('play', 'stat', { label: '<code>stats</code>', at: 'left' });
+      g.arrow('play', 'btn', { label: '<code>label, onClick</code>', at: 'right' });
+      g.loop('btn', 'game', { color: 'orange', dash: true, out: 90, label: "클릭: <code>onChoose('coding')</code> 호출" });
+    });
+    draw('avoid-usememo', (g) => {
+      g.arrow('tick', 'q');
+      g.arrow('q', 'same', { color: 'orange', label: '같음' });
+      g.arrow('q', 'diff', { label: '다름' });
+    });
+    draw('fix-component-hooks', (g) => {
+      g.tree('app', ['apple', 'milk', 'bread']);
+      g.arrow('set', 'milk', { color: 'orange', dash: true, label: '우유 Item만 다시 실행', at: 'right' });
+    });
+    window.__ready = true;
+  });
+</script>
+</body>
+</html>

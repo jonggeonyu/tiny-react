@@ -86,46 +86,9 @@ for (const child of newChildren) {
 }
 ```
 
-**트리로 보기: key 없음 → 번호로 짝짓기**
+![key 없음 → 번호로 짝짓기](docs/images/diff-key-none.png)
 
-```mermaid
-flowchart LR
-  subgraph before["이전 Virtual DOM"]
-    direction TB
-    o0["0: li 사과"]
-    o1["1: li 우유"]
-    o2["2: li 빵"]
-  end
-  subgraph after["새 Virtual DOM"]
-    direction TB
-    n0["0: li 우유"]
-    n1["1: li 빵"]
-  end
-  o0 -- "0번끼리 · TEXT" --> n0
-  o1 -- "1번끼리 · TEXT" --> n1
-  o2 -. "짝 없음 · REMOVE" .-> gone["삭제"]
-```
-
-**트리로 보기: key 있음 → 이름표로 짝짓기**
-
-```mermaid
-flowchart LR
-  subgraph before["이전 Virtual DOM"]
-    direction TB
-    o0["key=apple: li 사과"]
-    o1["key=milk: li 우유"]
-    o2["key=bread: li 빵"]
-  end
-  subgraph after["새 Virtual DOM"]
-    direction TB
-    gone["(없음)"]
-    n0["key=milk: li 우유"]
-    n1["key=bread: li 빵"]
-  end
-  o0 -. "짝 없음 · REMOVE" .-> gone
-  o1 -- "같은 key · 그대로" --> n0
-  o2 -- "같은 key · 그대로" --> n1
-```
+![key 있음 → 이름표로 짝짓기](docs/images/diff-key-with.png)
 
 **문제 1: DOM 상태가 엉뚱한 항목으로 넘어감**
 
@@ -141,25 +104,7 @@ flowchart LR
 [ ] 빵     ──▶   (삭제)
 ```
 
-```mermaid
-flowchart LR
-  subgraph changes["key 없음의 변경 목록"]
-    direction TB
-    c0["TEXT: 우유"]
-    c1["TEXT: 빵"]
-    c2["REMOVE"]
-  end
-  subgraph dom["실제 DOM 노드 (재사용)"]
-    direction TB
-    d0["노드 A<br/>체크 ✓ 그대로"]
-    d1["노드 B"]
-    d2["노드 C"]
-  end
-  c0 --> d0
-  c1 --> d1
-  c2 --> d2
-  d0 --> shown["화면: ✓ 우유"]
-```
+![체크가 다른 항목으로 넘어가는 과정](docs/images/diff-dom-state.png)
 
 - 실제 발생 사례: 게임에서 밤에 키보드로 `코딩` 선택 → 회식 버튼 등장 → 포커스가 같은 노드인 `회식 참석`에 남음 → Enter 한 번에 회식 참석
 
@@ -203,46 +148,12 @@ function App() {
 }
 ```
 
-**트리로 보기: 칸이 어긋나는 과정**
-
-```mermaid
-flowchart LR
-  subgraph first["첫 렌더 (사과 완료 체크)"]
-    direction TB
-    a0["hooks[0] items"]
-    a1["hooks[1] 사과의 done = true"]
-    a2["hooks[2] 빵의 done = false"]
-  end
-  subgraph second["사과 삭제 뒤"]
-    direction TB
-    b0["hooks[0] items"]
-    b1["hooks[1] 빵이 읽음 → done = true"]
-    b2["hooks[2] 아무도 안 읽음"]
-  end
-  a0 -.-> b0
-  a1 -. "같은 번호" .-> b1
-  a2 -.-> b2
-```
+![칸이 어긋나는 과정](docs/images/state-hooks-shift.png)
 
 - 빵은 완료한 적이 없는데 완료로 표시
 - 상태가 "어떤 항목의 것인지"가 아니라 "몇 번째 칸인지"로만 구분되기 때문
 
-**트리로 보기: 상태가 사는 곳**
-
-```mermaid
-flowchart TB
-  subgraph react["실제 React: 컴포넌트마다 State"]
-    direction TB
-    ra["App<br/>State: items"] --> rb["Item 사과<br/>State: done"]
-    ra --> rc["Item 빵<br/>State: done"]
-  end
-  subgraph tiny["tiny-react: 루트에만 State"]
-    direction TB
-    ta["Game<br/>hooks 13칸 전부"] --> tb["StatBar<br/>Props만"]
-    ta --> tc["ChoiceButton<br/>Props만"]
-    ta --> td["EventLog<br/>Props만"]
-  end
-```
+![상태가 사는 곳](docs/images/state-location.png)
 
 **결과**
 
@@ -255,26 +166,7 @@ flowchart TB
 - 화면이 커질수록 작은 상태 변경에도 전체를 다시 계산
 - 예: 게임의 1초 타이머 → 매초 `Game` 전체 실행과 화면 전체 Diff, 실제 변경은 숫자 하나
 
-**트리로 보기: 타이머 1초마다 다시 실행되는 범위** (주황색)
-
-```mermaid
-flowchart TB
-  subgraph tinyRun["tiny-react"]
-    direction TB
-    g["Game"]:::run --> s["StatBar"]:::run
-    g --> c["선택지"]:::run
-    g --> t["타이머 표시"]:::run
-    g --> l["EventLog"]:::run
-  end
-  subgraph reactRun["실제 React: 남은 시간을 Timer가 가지면"]
-    direction TB
-    g2["Game"] --> s2["StatBar"]
-    g2 --> c2["선택지"]
-    g2 --> t2["Timer"]:::run
-    g2 --> l2["EventLog"]
-  end
-  classDef run fill:#ffe0c2,stroke:#ff5d00,color:#0c0c0c
-```
+![타이머 1초마다 다시 실행되는 범위](docs/images/state-timer-scope.png)
 
 ## 4. 차이에 대한 수정 혹은 회피 방안
 
@@ -295,23 +187,7 @@ flowchart TB
 h('ol', { class: 'event-log' }, ...log.map((text) => h('li', null, text)))
 ```
 
-```mermaid
-flowchart LR
-  subgraph before["이전 기록"]
-    direction TB
-    a0["0: 빌드가 돌았다"]
-    a1["1: 옥상에서 상담"]
-  end
-  subgraph after["새 기록"]
-    direction TB
-    b0["0: 빌드가 돌았다"]
-    b1["1: 옥상에서 상담"]
-    b2["2: 이불 속이 천국"]
-  end
-  a0 -- "같음" --> b0
-  a1 -- "같음" --> b1
-  new["ADD 하나"] -.-> b2
-```
+![목록은 끝에만 추가](docs/images/avoid-append-only.png)
 
 - 앞쪽 번호가 그대로라 비교 결과는 끝의 `ADD` 하나
 - 최신 기록을 위로 뒤집으면 모든 줄이 한 칸씩 밀려 전부 `TEXT` 변경 → 대신 자동 스크롤
@@ -325,55 +201,18 @@ dinner
   : h('div', { class: 'choices' }, 코딩버튼, 담배버튼, 몰래버튼, 집버튼)
 ```
 
-```mermaid
-flowchart LR
-  subgraph bad["같은 태그 div → div"]
-    direction TB
-    x1["type 같음"] --> x2["자식끼리 번호로 비교"]
-    x2 --> x3["코딩 버튼 노드에<br/>글자만 '회식 참석'으로 변경"]
-    x3 --> x4["포커스 그대로 → Enter 한 번에 참석"]
-  end
-  subgraph good["다른 태그 div → section"]
-    direction TB
-    y1["type 다름"] --> y2["REPLACE"]
-    y2 --> y3["회식 버튼을 새 노드로 생성"]
-    y3 --> y4["이전 버튼은 문서에서 사라짐 → 포커스 없음"]
-  end
-  bad ~~~ good
-```
+![감싸는 태그를 다르게](docs/images/avoid-wrapper-tag.png)
 
 **3. 입력창은 바뀌는 목록 밖에 배치**
 
-```mermaid
-flowchart TB
-  screen["div.presentation-screen"] --> c0["0: h2 발표 2/5"]
-  screen --> c1["1: div 남은 시간"]
-  screen --> c2["2: p 설명"]
-  screen --> c3["3: p.target-name<br/>글자 칸 묶음"]
-  screen --> c4["4: input 입력창"]:::fixed
-  screen --> c5["5: button 넘기기"]
-  c3 --> s1["span u"]
-  c3 --> s2["span s"]
-  c3 --> s3["span e ... 이름마다 개수 변화"]
-  classDef fixed fill:#ffe0c2,stroke:#ff5d00,color:#0c0c0c
-```
+![입력창은 바뀌는 목록 밖에 배치](docs/images/avoid-input-position.png)
 
 - 글자 칸은 `p.target-name` 안에서만 늘고 줄어듦 → 입력창은 항상 4번 자리
 - 글자 칸을 입력창과 같은 줄에 두면 `useState`(8칸)에서 `useEffect`(9칸)로 바뀔 때 입력창 번호가 밀려 다른 노드로 교체
 
 **수정 (구현한다면)**
 
-```mermaid
-flowchart TD
-  start["새 자식 목록"] --> table["이전 자식으로 key → 노드 표 생성"]
-  table --> each{"새 자식마다<br/>같은 key가 표에 있나?"}
-  each -- "있음" --> same["그 노드와 diffNode<br/>위치가 다르면 MOVE"]
-  each -- "없음" --> insert["INSERT<br/>N번째 앞에 넣기"]
-  same --> rest["표에 남은 이전 자식"]
-  insert --> rest
-  rest --> remove["REMOVE"]
-  remove --> apply["patch: 번호 대신 노드 참조로<br/>insertBefore, remove"]
-```
+![key 비교를 구현한다면](docs/images/fix-key-flow.png)
 
 ```js
 // 지금: 끝에만 붙이는 ADD
@@ -408,17 +247,7 @@ h(PlayScreen, { game, onChoose: choose });
 h(ChoiceButton, { label: '코딩', onClick: () => onChoose('coding') });
 ```
 
-```mermaid
-flowchart TB
-  game["Game (루트)<br/>State와 Hook 전부"]
-  play["PlayScreen"]
-  stat["StatBar"]
-  button["ChoiceButton"]
-  game -- "값: game, timeLeft" --> play
-  play -- "값: stats" --> stat
-  play -- "값: label, onClick" --> button
-  button -. "클릭: onChoose('coding') 호출" .-> game
-```
+![값은 내려가고 사건은 올라감](docs/images/avoid-props-flow.png)
 
 **3. 무거운 계산 보호**
 
@@ -427,12 +256,7 @@ flowchart TB
 const title = useMemo(() => getTitle(game.stats), [game.stats]);
 ```
 
-```mermaid
-flowchart LR
-  tick["1초 경과<br/>Game 다시 실행"] --> check{"stats가<br/>지난번과 같나?"}
-  check -- "같음" --> reuse["저장한 칭호 그대로"]
-  check -- "다름" --> compute["getTitle 다시 계산"]
-```
+![무거운 계산 보호](docs/images/avoid-usememo.png)
 
 **수정 (구현한다면)**
 
@@ -448,14 +272,7 @@ if (typeof type === 'function') {
 }
 ```
 
-```mermaid
-flowchart TB
-  app["App 인스턴스<br/>hooks: items"] --> apple["Item key=apple<br/>hooks: done=true"]
-  app --> milk["Item key=milk<br/>hooks: done=false"]:::run
-  app --> bread["Item key=bread<br/>hooks: done=false"]
-  set["우유의 setDone(true)"] -.-> milk
-  classDef run fill:#ffe0c2,stroke:#ff5d00,color:#0c0c0c
-```
+![컴포넌트마다 hooks를 둔다면](docs/images/fix-component-hooks.png)
 
 - 인스턴스마다 `hooks` 보유 → 우유의 상태가 바뀌면 우유 `Item`만 다시 실행 (주황색)
 - 사과를 지워도 key로 인스턴스를 찾으므로 빵은 자기 `hooks`를 그대로 유지 → 칸 어긋남 해결
