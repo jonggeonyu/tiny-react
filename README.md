@@ -128,6 +128,10 @@ for (const child of newChildren) {
 - tiny-react: `hooks` 배열이 루트 `FunctionComponent`에 하나뿐, 자식 컴포넌트는 State를 가질 수 없음 (과제 제약)
 - 실제 React: 컴포넌트마다 자기 State 보유
 
+**과제 제약 조건**
+
+![과제 제약 조건: Hook과 State는 루트 컴포넌트에서만](docs/images/constraint-root-state.png)
+
 **이유: 호출 순서로 칸을 찾는 구조**
 
 - 자식이 Hook을 쓰면 자식의 칸도 같은 배열에 들어감
