@@ -75,7 +75,7 @@ function styleDetails(before, after) {
 }
 
 export function createVdomDetails(changes, oldTree, nextTree) {
-  return changes.filter((change) => change.type !== 'form').map((change) => {
+  return changes.filter((change) => !['form', 'reorder'].includes(change.type)).map((change) => {
     const isAdd = change.type === 'add';
     const isRemove = change.type === 'remove';
     const node = change.nextNode || change.oldNode;
@@ -84,7 +84,10 @@ export function createVdomDetails(changes, oldTree, nextTree) {
     let type = change.type;
     let before = null;
     let after = null;
-    if (type === 'attribute') {
+    if (type === 'move') {
+      before = describeNode(change.oldNode);
+      after = describeNode(change.nextNode);
+    } else if (type === 'attribute') {
       type = change.name === 'style' ? 'style' : change.previous === undefined ? 'attribute-add' : change.next === undefined ? 'attribute-remove' : 'attribute-change';
       before = change.previous ?? null;
       after = change.next ?? null;
@@ -102,11 +105,12 @@ export function createVdomDetails(changes, oldTree, nextTree) {
     return {
       type,
       attributeName: change.type === 'attribute' && change.name !== 'style' ? change.name : null,
-      path: [...change.path],
+      path: [...(isAdd && change.nextPath ? change.nextPath : change.path)],
       tree,
-      location: describeLocation(root, change.path),
+      location: describeLocation(root, isAdd && change.nextPath ? change.nextPath : change.path),
       before,
       after,
+      ...(type === 'move' ? { nextPath: [...change.nextPath] } : {}),
       ...(type === 'style' ? styleDetails(before, after) : {}),
     };
   });
@@ -147,7 +151,7 @@ function isDeclaration(declaration) {
 }
 
 function isDetail(detail) {
-  const types = ['text-add', 'text-remove', 'element-add', 'element-remove', 'text', 'replace',
+  const types = ['text-add', 'text-remove', 'element-add', 'element-remove', 'text', 'replace', 'move',
     'attribute-add', 'attribute-remove', 'attribute-change', 'style'];
   if (!detail || typeof detail !== 'object' || !types.includes(detail.type) ||
       !Array.isArray(detail.path) || !detail.path.every((index) => Number.isInteger(index) && index >= 0) ||
@@ -157,6 +161,10 @@ function isDetail(detail) {
     return false;
   }
   if (detail.type.startsWith('attribute-') && typeof detail.attributeName !== 'string') {
+    return false;
+  }
+  if (detail.type === 'move' && (!Array.isArray(detail.nextPath) ||
+      !detail.nextPath.every((index) => Number.isInteger(index) && index >= 0))) {
     return false;
   }
   if (detail.type === 'style') {
@@ -195,7 +203,7 @@ export function renderVdomDetails(region, text, details, summary) {
   list.setAttribute('aria-label', 'Virtual DOM 변경 상세');
   const labels = {
     text: '텍스트 노드 변경', 'text-add': '텍스트 추가', 'text-remove': '텍스트 삭제',
-    'element-add': '요소 추가', 'element-remove': '요소 삭제', replace: '요소 교체',
+    'element-add': '요소 추가', 'element-remove': '요소 삭제', replace: '요소 교체', move: '요소 이동',
     'attribute-add': '속성 추가', 'attribute-remove': '속성 삭제',
     'attribute-change': '속성 변경', style: 'style 속성 변경',
   };
@@ -229,6 +237,14 @@ export function renderVdomDetails(region, text, details, summary) {
     appendValue(item, '이전', detail.before, 'data-change-before');
     appendValue(item, '새', detail.after, 'data-change-after');
     item.append(path);
+    if (detail.type === 'move') {
+      const destination = document.createElement('span');
+      destination.dataset.changePath = '';
+      destination.dataset.tree = 'new';
+      destination.dataset.path = detail.nextPath.join('/');
+      destination.textContent = ` 새 트리 childNodes 경로 [${detail.nextPath.join(', ')}] `;
+      item.append(destination);
+    }
     if (detail.styleDetail === 'declarations' && Array.isArray(detail.declarations)) {
       const declarations = document.createElement('ul');
       for (const declaration of detail.declarations) {

@@ -1,6 +1,7 @@
 import { inspectHtml, renderDiagnostics, errorDiagnostic } from './html-validation.js';
 import { createVirtualRoot } from './vdom.js';
 import { renderVirtualRoot } from './render.js';
+import { getNodeKey, matchChildren } from './keyed-children.js';
 
 const controls = 'input, textarea, select';
 
@@ -11,6 +12,17 @@ function pathOf(element, root) {
     element = element.parentNode;
   }
   return path.join('/');
+}
+
+function hasKeyedAncestor(element, root) {
+  let current = element;
+  while (current && current !== root) {
+    if (current.nodeType === 1 && current.hasAttribute('data-key')) {
+      return true;
+    }
+    current = current.parentNode;
+  }
+  return false;
 }
 
 function signature(element) {
@@ -31,9 +43,19 @@ function valueNeutralSignature(element) {
   return clone.outerHTML;
 }
 
-function copyState(source, target) {
+function copyState(source, target, keyedOptions = false) {
   if (source.localName === 'select') {
-    if (source.multiple) {
+    if (keyedOptions) {
+      const states = new Map(Array.from(source.options, (option) => [option.getAttribute('data-key'), option.selected]));
+      const options = Array.from(target.options);
+      if (source.multiple) {
+        options.forEach((option) => {
+          option.selected = states.get(option.getAttribute('data-key'));
+        });
+      } else {
+        target.selectedIndex = options.findIndex((option) => states.get(option.getAttribute('data-key')));
+      }
+    } else if (source.multiple) {
       Array.from(source.options).forEach((option, index) => {
         target.options[index].selected = option.selected;
       });
@@ -45,6 +67,38 @@ function copyState(source, target) {
   } else {
     target.value = source.value;
   }
+}
+
+function hasMatchingKeyedOptions(previous, next) {
+  if (!next || previous.localName !== 'select' || next.localName !== 'select' ||
+      !previous.cloneNode(false).isEqualNode(next.cloneNode(false))) {
+    return false;
+  }
+  const oldOptions = Array.from(previous.options);
+  const nextOptions = Array.from(next.options);
+  if (!oldOptions.length || oldOptions.length !== nextOptions.length ||
+      Array.from(previous.children).some((child) => child.localName !== 'option') ||
+      Array.from(next.children).some((child) => child.localName !== 'option')) {
+    return false;
+  }
+  const optionsByKey = new Map();
+  for (const option of oldOptions) {
+    const key = option.getAttribute('data-key');
+    if (key === null || key.trim() === '' || optionsByKey.has(key)) {
+      return false;
+    }
+    optionsByKey.set(key, option);
+  }
+  const seen = new Set();
+  for (const option of nextOptions) {
+    const key = option.getAttribute('data-key');
+    const oldOption = optionsByKey.get(key);
+    if (!oldOption || seen.has(key) || !oldOption.isEqualNode(option)) {
+      return false;
+    }
+    seen.add(key);
+  }
+  return true;
 }
 
 function labelFor(element) {
@@ -60,6 +114,34 @@ function labelFor(element) {
   return '입력창';
 }
 
+function findKeyedControls(oldRoot, nextRoot) {
+  const oldTree = createVirtualRoot(oldRoot);
+  const nextTree = createVirtualRoot(nextRoot);
+  const targets = new WeakMap();
+
+  function visit(oldDom, nextDom, oldNode, nextNode, identified) {
+    if (oldNode.type !== nextNode.type || oldNode.tag !== nextNode.tag) {
+      return;
+    }
+    if (oldNode.type === 'element' && oldDom.matches(controls)) {
+      targets.set(oldDom, { target: nextDom, identified });
+    }
+    const matches = matchChildren(oldNode.children, nextNode.children);
+    nextNode.children.forEach((child, index) => {
+      const oldIndex = matches[index];
+      if (oldIndex === null) {
+        return;
+      }
+      const previous = oldNode.children[oldIndex];
+      const keyed = getNodeKey(previous) !== null && getNodeKey(previous) === getNodeKey(child);
+      visit(oldDom.childNodes[oldIndex], nextDom.childNodes[index], previous, child, identified || keyed);
+    });
+  }
+
+  visit(oldRoot, nextRoot, oldTree, nextTree, false);
+  return targets;
+}
+
 export function prepareCarryOver(oldHtml, preview, next) {
   const oldTemplate = document.createElement('template');
   oldTemplate.innerHTML = oldHtml;
@@ -71,22 +153,39 @@ export function prepareCarryOver(oldHtml, preview, next) {
   const counts = new Map();
   let emptySelectionMayBeLost = false;
   const oldRoot = oldTemplate.content;
+  const keyedTargets = findKeyedControls(oldRoot, next);
   const matches = [];
   const radioLossGroups = new Set();
   const radioHtmlGroups = new Set();
   for (const [index, oldNode] of oldNodes.entries()) {
     const sig = signature(oldNode);
+    const matchedControl = keyedTargets.get(oldNode);
+    const keyedTarget = matchedControl?.identified ? matchedControl.target : null;
+    if (hasMatchingKeyedOptions(oldNode, matchedControl?.target)) {
+      matches.push({ oldNode, live: liveNodes[index], target: matchedControl.target, keyedOptions: true });
+      continue;
+    }
+    if (keyedTarget && signature(keyedTarget) === sig) {
+      matches.push({ oldNode, live: liveNodes[index], target: keyedTarget });
+      continue;
+    }
+    if (keyedTarget && valueNeutralSignature(keyedTarget) === valueNeutralSignature(oldNode)) {
+      continue;
+    }
     const oldMatches = oldNodes.filter((node) => signature(node) === sig);
     const newMatches = newNodes.filter((node) => signature(node) === sig);
     const path = pathOf(oldNode, oldRoot);
     const match = newMatches.length === 1 && oldMatches.length === 1 ? newMatches[0] : null;
-    if (match && (pathOf(match, next) === path || sameControlSequence)) {
+    const keyRequiresMatch = hasKeyedAncestor(oldNode, oldRoot) ||
+      (match && hasKeyedAncestor(match, next));
+    if (match && !keyRequiresMatch && (pathOf(match, next) === path || sameControlSequence)) {
       matches.push({ oldNode, live: liveNodes[index], target: match });
       continue;
     }
     const editedValue = newNodes.find((node) => pathOf(node, next) === path &&
       valueNeutralSignature(node) === valueNeutralSignature(oldNode));
-    if (editedValue && oldMatches.length === 1 && newNodes.filter((node) => valueNeutralSignature(node) === valueNeutralSignature(oldNode)).length === 1) {
+    if (editedValue && !hasKeyedAncestor(oldNode, oldRoot) && !hasKeyedAncestor(editedValue, next) &&
+        oldMatches.length === 1 && newNodes.filter((node) => valueNeutralSignature(node) === valueNeutralSignature(oldNode)).length === 1) {
       continue;
     }
     const label = labelFor(oldNode);
@@ -110,11 +209,11 @@ export function prepareCarryOver(oldHtml, preview, next) {
       radioHtmlGroups.add(node.name);
     }
   }
-  for (const { oldNode, live, target } of matches) {
+  for (const { oldNode, live, target, keyedOptions } of matches) {
     if (oldNode.type === 'radio' && oldNode.name && radioLossGroups.has(oldNode.name)) {
       counts.set('라디오 버튼', (counts.get('라디오 버튼') || 0) + 1);
     } else if (oldNode.type !== 'radio' || !oldNode.name || !radioHtmlGroups.has(oldNode.name)) {
-      copyState(live, target);
+      copyState(live, target, keyedOptions);
     }
   }
   return { counts, emptySelectionMayBeLost };

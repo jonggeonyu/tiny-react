@@ -1,3 +1,5 @@
+import { getNodeKey, matchChildren } from './keyed-children.js';
+
 const countElements = (node) => node.type === 'element' ? 1 + node.children.reduce((sum, child) => sum + countElements(child), 0) : 0;
 
 function describeAttributeValue(value) {
@@ -7,19 +9,34 @@ function describeAttributeValue(value) {
 function summarizeRadioChanges(oldTree, nextTree, add, details) {
   function radioGroups(root) {
     const groups = new Map();
-    function visit(node) {
+    function visit(node, path) {
       if (node.tag === 'input' && node.attributes.type?.toLowerCase() === 'radio' && node.attributes.name) {
         const name = node.attributes.name;
         if (!groups.has(name)) {
           groups.set(name, []);
         }
-        groups.get(name).push(node);
+        groups.get(name).push({ node, path });
       }
-      node.children.forEach(visit);
+      node.children.forEach((child, index) => visit(child, [...path, index]));
     }
-    visit(root);
+    visit(root, []);
     return groups;
   }
+  const correspondingPaths = new Map();
+  function visitPairs(previous, next, oldPath, nextPath) {
+    if (!previous || !next || previous.type !== next.type || previous.tag !== next.tag) {
+      return;
+    }
+    correspondingPaths.set(JSON.stringify(nextPath), JSON.stringify(oldPath));
+    const matches = matchChildren(previous.children, next.children);
+    next.children.forEach((child, index) => {
+      const oldIndex = matches[index];
+      if (oldIndex !== null) {
+        visitPairs(previous.children[oldIndex], child, [...oldPath, oldIndex], [...nextPath, index]);
+      }
+    });
+  }
+  visitPairs(oldTree, nextTree, [], []);
   const previousGroups = radioGroups(oldTree);
   const nextGroups = radioGroups(nextTree);
   for (const [name, previous] of previousGroups) {
@@ -28,14 +45,20 @@ function summarizeRadioChanges(oldTree, nextTree, add, details) {
       continue;
     }
     const selected = (nodes) => {
-      const index = nodes.findIndex((node) => node.formState.checked);
-      return index < 0 ? '선택 없음' : `${nodes[index].attributes.value ?? 'on'} (${index + 1}번째)`;
+      const index = nodes.findIndex(({ node }) => node.formState.checked);
+      return index < 0 ? null : { ...nodes[index], label: `${nodes[index].node.attributes.value ?? 'on'} (${index + 1}번째)` };
     };
     const before = selected(previous);
     const after = selected(next);
-    if (before !== after) {
+    const sameKeyedSelection = before && after && getNodeKey(before.node) !== null &&
+      getNodeKey(after.node) === getNodeKey(before.node) &&
+      before.node.attributes.value === after.node.attributes.value &&
+      correspondingPaths.get(JSON.stringify(after.path)) === JSON.stringify(before.path);
+    const beforeLabel = before?.label ?? '선택 없음';
+    const afterLabel = after?.label ?? '선택 없음';
+    if (beforeLabel !== afterLabel && !sameKeyedSelection) {
       add('선택 변경');
-      details.push(`선택 변경 1건: ${before} → ${after}`);
+      details.push(`선택 변경 1건: ${beforeLabel} → ${afterLabel}`);
     }
   }
 }
@@ -60,14 +83,19 @@ function summarizeSelectChanges(oldNode, nextNode, add, details) {
       value: option.attributes.value,
       text: option.children.map((child) => child.text || '').join(''),
     });
-    const structureChanged = oldOptions.length !== nextOptions.length;
+    const structureChanged = oldOptions.length !== nextOptions.length ||
+      [...oldOptions, ...nextOptions].some((option) => getNodeKey(option) !== null);
     const optionKeys = (options) => {
       const occurrences = new Map();
       return options.map((option) => {
+        const explicitKey = getNodeKey(option);
+        if (explicitKey !== null) {
+          return JSON.stringify(['key', explicitKey]);
+        }
         const key = fingerprint(option);
         const occurrence = (occurrences.get(key) || 0) + 1;
         occurrences.set(key, occurrence);
-        return JSON.stringify([key, occurrence]);
+        return JSON.stringify(['content', key, occurrence]);
       });
     };
     const oldKeys = structureChanged ? optionKeys(oldOptions) : [];
@@ -85,7 +113,11 @@ function summarizeSelectChanges(oldNode, nextNode, add, details) {
       details.push(`선택 변경 1건: ${selectedText(oldOptions, before)} → ${selectedText(nextOptions, after)}`);
     }
   }
-  nextNode.children.forEach((child, index) => summarizeSelectChanges(oldNode.children[index], child, add, details));
+  const matches = matchChildren(oldNode.children, nextNode.children);
+  nextNode.children.forEach((child, index) => {
+    const oldIndex = matches[index];
+    summarizeSelectChanges(oldIndex === null ? undefined : oldNode.children[oldIndex], child, add, details);
+  });
 }
 
 export function describeChanges(changes, oldTree, nextTree) {
@@ -96,7 +128,13 @@ export function describeChanges(changes, oldTree, nextTree) {
   summarizeRadioChanges(oldTree, nextTree, add, details);
   formDetails.push(...details);
   for (const change of changes) {
-    if (change.type === 'form') {
+    if (change.type === 'reorder') {
+      continue;
+    }
+    if (change.type === 'move') {
+      add('요소 이동');
+      details.push(`요소 이동: 이전 [${change.path.join(', ')}] → 새 [${change.nextPath.join(', ')}]`);
+    } else if (change.type === 'form') {
       if (change.nextNode.tag === 'option') {
         continue;
       }

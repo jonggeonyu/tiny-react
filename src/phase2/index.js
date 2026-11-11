@@ -1,6 +1,7 @@
 import { diff } from '../diff.js';
 import { preparePatch, applyPatch } from '../patch.js';
 import { copyDependencies } from '../hooks/dependencies.js';
+import { getNodeKey, matchChildren } from '../keyed-children.js';
 
 const areas = new Map();
 let context = null;
@@ -243,6 +244,7 @@ function snapshotContainer(container) {
 }
 
 function restoreUncontrolledForms(container, snapshot, beforeTree, afterTree) {
+  const optionStates = new WeakMap();
   function visit(dom, saved, before, after) {
     if (!dom || !saved || !before || !after || before.type !== after.type || before.tag !== after.tag) {
       return;
@@ -259,9 +261,17 @@ function restoreUncontrolledForms(container, snapshot, beforeTree, afterTree) {
         }
       } else if (after.tag === 'textarea') {
         dom.value = saved.value;
+      } else if (after.tag === 'option') {
+        optionStates.set(dom, saved.selected);
       }
     }
-    after.children.forEach((child, index) => visit(dom.childNodes[index], saved.childNodes[index], before.children[index], child));
+    const matches = matchChildren(before.children, after.children);
+    after.children.forEach((child, index) => {
+      const oldIndex = matches[index];
+      if (oldIndex !== null) {
+        visit(dom.childNodes[index], saved.childNodes[oldIndex], before.children[oldIndex], child);
+      }
+    });
     if (after.tag === 'select') {
       const options = [];
       const collect = (node) => {
@@ -271,11 +281,26 @@ function restoreUncontrolledForms(container, snapshot, beforeTree, afterTree) {
         node.children.forEach(collect);
       };
       after.children.forEach(collect);
-      if (options.every((option) => option.formState === null) && dom.options.length === saved.options.length) {
+      const previousOptions = [];
+      const collectPrevious = (node) => {
+        if (node.tag === 'option') {
+          previousOptions.push(node);
+        }
+        node.children.forEach(collectPrevious);
+      };
+      before.children.forEach(collectPrevious);
+      const keyed = [...previousOptions, ...options].some((option) => getNodeKey(option) !== null);
+      if (options.every((option) => option.formState === null) &&
+          (dom.options.length === saved.options.length || keyed)) {
+        const selected = Array.from(dom.options, (option) => optionStates.has(option)
+          ? optionStates.get(option)
+          : option.selected);
         if (dom.multiple) {
-          Array.from(dom.options).forEach((option, index) => { option.selected = saved.options[index].selected; });
+          Array.from(dom.options).forEach((option, index) => {
+            option.selected = selected[index];
+          });
         } else {
-          dom.selectedIndex = saved.selectedIndex;
+          dom.selectedIndex = selected.findIndex(Boolean);
         }
       }
     }

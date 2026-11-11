@@ -1,5 +1,8 @@
-﻿const allowedTags = new Set(['div', 'section', 'p', 'span', 'strong', 'em', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'input', 'textarea', 'select', 'option', 'button', 'label']);
-const commonAttributes = new Set(['id', 'class', 'title', 'style']);
+import { validateSiblingKeys } from './keyed-children.js';
+
+const allowedTags = new Set(['div', 'section', 'p', 'span', 'strong', 'em', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'input', 'textarea', 'select', 'option', 'button', 'label']);
+
+const commonAttributes = new Set(['id', 'class', 'title', 'style', 'data-key']);
 const elementAttributes = {
   input: new Set(['type', 'value', 'placeholder', 'checked', 'name', 'disabled']),
   textarea: new Set(['placeholder', 'name', 'disabled']),
@@ -88,5 +91,7 @@ function convertNode(node) {
 
 export function createVirtualRoot(container) {
   const children = Object.freeze(Array.from(container.childNodes, convertNode));
-  return Object.freeze({ type: 'root', tag: null, attributes: Object.freeze({}), text: null, children, formState: null });
+  const root = Object.freeze({ type: 'root', tag: null, attributes: Object.freeze({}), text: null, children, formState: null });
+  validateSiblingKeys(root);
+  return root;
 }

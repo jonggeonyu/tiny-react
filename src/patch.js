@@ -9,7 +9,9 @@ function renderNode(node, document) {
 }
 
 export function preparePatch(container, changes, oldTree) {
-  const resolved = changes.map((change) => ({ ...change, node: nodeAt(container, change.path), parent: nodeAt(container, change.path.slice(0, -1)) }));
+  const ordinaryChanges = changes.filter((change) => !change.managed);
+  const resolved = ordinaryChanges.map((change) => ({ ...change, node: nodeAt(container, change.path), parent: nodeAt(container, change.path.slice(0, -1)) }));
+  const reorders = prepareReorders(container, changes, oldTree);
   const additions = new Map();
   for (const change of resolved) {
     let currentDom = container;
@@ -97,16 +99,79 @@ export function preparePatch(container, changes, oldTree) {
   if (ordered.length !== actions.length) {
     throw new Error('DOM 작업 순서를 결정하지 못했습니다.');
   }
-  return ordered;
+  return [...ordered, ...reorders];
+}
+
+function prepareReorders(container, changes, oldTree) {
+  const destructive = changes.filter((change) => ['remove', 'replace'].includes(change.type));
+  const plans = changes.filter((change) => change.orderPlan).map((change) => change.orderPlan);
+  const planPaths = new Set(plans.map((plan) => JSON.stringify(plan.path)));
+  if (planPaths.size !== plans.length) {
+    throw new Error('같은 부모에 대한 순서 정보가 중복되었습니다.');
+  }
+  for (const change of changes) {
+    if (change.managed && (!Array.isArray(change.groupPath) || !planPaths.has(JSON.stringify(change.groupPath)))) {
+      throw new Error('자식 변경에 필요한 순서 정보가 없습니다.');
+    }
+  }
+  return plans.map((change) => {
+    let parent = container;
+    let previous = oldTree;
+    for (const index of change.path) {
+      parent = parent?.childNodes[index];
+      previous = previous?.children[index];
+      if (!parent || !previous ||
+          (previous.type === 'text' && parent.nodeType !== 3) ||
+          (previous.type === 'element' && (parent.nodeType !== 1 || parent.localName !== previous.tag))) {
+        throw new Error('이동할 부모의 경로가 이전 상태와 다릅니다.');
+      }
+    }
+    if (!parent || !previous || !Array.isArray(change.entries) ||
+        parent.childNodes.length !== previous.children.length) {
+      throw new Error('이동할 부모의 자식 목록이 이전 상태와 다릅니다.');
+    }
+    for (const operation of destructive) {
+      if (operation.path.length <= change.path.length &&
+          operation.path.every((index, depth) => change.path[depth] === index)) {
+        throw new Error('부모 변경과 자식 순서 변경이 충돌합니다.');
+      }
+    }
+    const oldNodes = Array.from(parent.childNodes);
+    previous.children.forEach((child, index) => {
+      const node = oldNodes[index];
+      if ((child.type === 'text' && node.nodeType !== 3) ||
+          (child.type === 'element' && (node.nodeType !== 1 || node.localName !== child.tag))) {
+        throw new Error('이동할 자식의 노드 종류가 이전 상태와 다릅니다.');
+      }
+    });
+    const used = new Set();
+    for (const entry of change.entries) {
+      if (!entry || !entry.nextNode || (entry.oldIndex !== null &&
+          (!Number.isInteger(entry.oldIndex) || entry.oldIndex < 0 || entry.oldIndex >= oldNodes.length || used.has(entry.oldIndex)))) {
+        throw new Error('자식 순서 변경 정보가 올바르지 않습니다.');
+      }
+      if (entry.oldIndex !== null) {
+        used.add(entry.oldIndex);
+      }
+    }
+    if (!Array.isArray(change.stable) || change.stable.some((index) =>
+      !Number.isInteger(index) || index < 0 || index >= change.entries.length)) {
+      throw new Error('유지할 자식의 순서 정보가 올바르지 않습니다.');
+    }
+    return { ...change, type: 'reorder', parent, oldNodes, used, stable: new Set(change.stable) };
+  }).sort((first, second) => second.path.length - first.path.length);
 }
 
 export function applyPatch(container, resolved, targetTree) {
+  const replacements = new Map();
   for (const change of resolved) {
     const { type, node, parent, nextNode, name, next } = change;
     if (type === 'add') {
       parent.appendChild(renderNode(nextNode, container.ownerDocument));
     } else if (type === 'replace') {
-      parent.replaceChild(renderNode(nextNode, container.ownerDocument), node);
+      const replacement = renderNode(nextNode, container.ownerDocument);
+      parent.replaceChild(replacement, node);
+      replacements.set(node, replacement);
     } else if (type === 'text') {
       node.data = nextNode.text;
     } else if (type === 'attribute') {
@@ -117,6 +182,8 @@ export function applyPatch(container, resolved, targetTree) {
       }
     } else if (type === 'remove') {
       parent.removeChild(node);
+    } else if (type === 'reorder') {
+      reorderChildren(change, replacements, container.ownerDocument);
     }
   }
   function synchronize(node, tree) {
@@ -151,4 +218,24 @@ export function applyPatch(container, resolved, targetTree) {
     tree.children.forEach((child, index) => verify(node.childNodes[index], child));
   }
   verify(container, targetTree);
+}
+
+function reorderChildren(change, replacements, document) {
+  const currentNode = (node) => replacements.get(node) || node;
+  change.oldNodes.forEach((node, index) => {
+    if (!change.used.has(index)) {
+      change.parent.removeChild(currentNode(node));
+    }
+  });
+  let anchor = null;
+  for (let index = change.entries.length - 1; index >= 0; index -= 1) {
+    const entry = change.entries[index];
+    const node = entry.oldIndex === null
+      ? renderNode(entry.nextNode, document)
+      : currentNode(change.oldNodes[entry.oldIndex]);
+    if (entry.oldIndex === null || !change.stable.has(index)) {
+      change.parent.insertBefore(node, anchor);
+    }
+    anchor = node;
+  }
 }
