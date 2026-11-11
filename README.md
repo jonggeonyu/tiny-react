@@ -1,4 +1,4 @@
- # tiny-react
+# tiny-react
 
 **React 없이, React가 화면을 바꾸는 원리를 Vanilla JavaScript로 직접 구현**
 
@@ -10,24 +10,23 @@
 
 ![Phase 1 아키텍처](docs/images/architecture-phase1.png)
 
-| 순서 | 하는 일 | 위치 |
+| 단계 | 하는 일 | 위치 |
 |---|---|---|
-| 1 | 페이지 로드 시 실제 영역을 `domToVdom`으로 이전 VNode 생성 | `src/core/domToVdom.js` |
-| 2 | Patch 클릭 시 textarea의 HTML을 `htmlToVdom`으로 새 VNode 생성 | `src/core/html.js` |
-| 3 | `diff`로 두 트리 비교 → `patch`로 변경분만 실제 영역에 반영 | `src/core/diff.js`, `src/core/patch.js` |
-| 4 | 새 VNode를 State History에 저장, 뒤로와 앞으로도 diff 후 Patch | `src/phase1/StateHistory.js` |
+| 01 입력 | 실제 영역은 `domToVdom`으로 이전 VNode, textarea의 HTML은 `htmlToVdom`으로 새 VNode 생성 | `src/core/domToVdom.js`, `src/core/html.js` |
+| 02 비교 | `diff(old, new)`로 같은 번호의 자식끼리 비교, 변경 목록 생성 | `src/core/diff.js` |
+| 03 반영 | `patch`로 변경 목록만 실제 영역에 적용, 새 VNode를 State History에 저장 | `src/core/patch.js`, `src/phase1/StateHistory.js` |
+
+- 뒤로가기, 앞으로가기: History의 두 VNode를 같은 방식으로 비교해 실제 영역도 Patch
 
 ### 1.2 Phase 2: 상태가 바뀌면 자동으로 다시 그리기
 
 ![Phase 2 아키텍처](docs/images/architecture-phase2.png)
 
-| 순서 | 하는 일 | 위치 |
+| 단계 | 하는 일 | 위치 |
 |---|---|---|
-| 1 | `setState`로 루트의 `hooks` 칸 값 변경 | `src/core/hooks.js` |
-| 2 | 루트 `Game` 다시 실행, Hook은 호출 순서로 자기 칸 탐색 | `src/phase2/Game.js` |
-| 3 | 자식 컴포넌트는 Props만 받아 새 VNode 생성 | `src/phase2/components.js`, `src/core/h.js` |
-| 4 | Phase 1의 `diff`로 이전 트리 전체와 비교 | `src/core/diff.js` |
-| 5 | Phase 1의 `patch`로 실제 DOM 반영 후 `useEffect` 실행 | `src/core/FunctionComponent.js` |
+| 01 상태 변경 | 자식의 클릭 → Props로 받은 함수 호출 → 루트의 `setState`가 `hooks` 칸 값 변경 | `src/core/hooks.js` |
+| 02 다시 그리기 | `update()` 한 번 예약 → `Game()` 재실행, Hook은 호출 순서로 자기 칸 탐색 → 자식은 Props만 받아 새 VNode 생성 | `src/core/FunctionComponent.js`, `src/phase2/Game.js` |
+| 03 화면 반영 | Phase 1의 `diff`로 이전 트리와 비교 → `patch`로 실제 DOM 반영 → `useEffect` 실행 | `src/core/diff.js`, `src/core/patch.js` |
 
 - 상태 위치: 함수 밖, `FunctionComponent` 인스턴스의 `hooks` 배열 → 함수가 다시 실행돼도 값 유지
 - Batching: 한 번의 클릭에서 `setState`를 여러 번 불러도 `update`는 `queueMicrotask`로 한 번만 실행
@@ -51,8 +50,6 @@
 | 이벤트 | `element.onclick` 프로퍼티 | 루트에서 이벤트 위임 |
 | `onChange` | 브라우저 `change` 이벤트(입력이 끝날 때) | 입력할 때마다 |
 
-- 굵게 표시한 두 가지를 3절에서 자세히 설명
-
 ## 3. 세부적인 차이
 
 ### 3.1 key 유무
@@ -62,12 +59,12 @@
 
 **예시: `['사과', '우유', '빵']`에서 `사과` 삭제**
 
-| 번호 | 이전 | 새것 | key 없음 (tiny-react) | key 있음 (React) |
-|---|---|---|---|---|
-| 0 | 사과 | 우유 | `TEXT` 우유로 변경 | 그대로 (`우유` 노드 유지) |
-| 1 | 우유 | 빵 | `TEXT` 빵으로 변경 | 그대로 (`빵` 노드 유지) |
-| 2 | 빵 | 없음 | `REMOVE` | `사과` 노드만 `REMOVE` |
-| | | | **변경 3건** | **변경 1건** |
+| 번호  | 이전  | 새것  | key 없음 (tiny-react) | key 있음 (React)    |
+| --- | --- | --- | ------------------- | ----------------- |
+| 0   | 사과  | 우유  | `TEXT` 우유로 변경       | 그대로 (`우유` 노드 유지)  |
+| 1   | 우유  | 빵   | `TEXT` 빵으로 변경       | 그대로 (`빵` 노드 유지)   |
+| 2   | 빵   | 없음  | `REMOVE`            | `사과` 노드만 `REMOVE` |
+|     |     |     | **변경 3건**           | **변경 1건**         |
 
 - 끝에서 추가, 삭제: 차이 없음
 - 앞이나 가운데에서 추가, 삭제: 그 위치부터 끝까지 전부 변경
@@ -164,7 +161,7 @@ flowchart LR
   d0 --> shown["화면: ✓ 우유"]
 ```
 
-- 실제 발생 사례: 게임에서 밤에 키보드로 `코딩` 선택 → 회식 버튼 등장 → 포커스가 같은 노드인 `회식 참석`에 남음 → Enter 한 번에 회식 참석 (4절에서 회피)
+- 실제 발생 사례: 게임에서 밤에 키보드로 `코딩` 선택 → 회식 버튼 등장 → 포커스가 같은 노드인 `회식 참석`에 남음 → Enter 한 번에 회식 참석
 
 **문제 2: 성능**
 
@@ -249,11 +246,11 @@ flowchart TB
 
 **결과**
 
-| 항목 | tiny-react | 실제 React |
-|---|---|---|
-| 상태를 두는 곳 | 모든 상태를 루트로 올림 (Lifting State Up) | 쓰는 컴포넌트 가까이 |
-| 상태 하나가 바뀌면 다시 실행되는 범위 | 루트 컴포넌트 전체, 화면 전체 Diff | 바뀐 컴포넌트와 그 아래만 |
-| 자식에서 Hook 호출 | 오류로 차단 | 허용 |
+| 항목                    | tiny-react                       | 실제 React       |
+| --------------------- | -------------------------------- | -------------- |
+| 상태를 두는 곳              | 모든 상태를 루트로 올림 (Lifting State Up) | 쓰는 컴포넌트 가까이    |
+| 상태 하나가 바뀌면 다시 실행되는 범위 | 루트 컴포넌트 전체, 화면 전체 Diff           | 바뀐 컴포넌트와 그 아래만 |
+| 자식에서 Hook 호출          | 오류로 차단                           | 허용             |
 
 - 화면이 커질수록 작은 상태 변경에도 전체를 다시 계산
 - 예: 게임의 1초 타이머 → 매초 `Game` 전체 실행과 화면 전체 Diff, 실제 변경은 숫자 하나
@@ -285,11 +282,11 @@ flowchart TB
 
 **회피 (현재 적용)**
 
-| 방법 | 적용한 곳 | 효과 |
-|---|---|---|
-| 1. 목록은 끝에만 추가 | 게임의 사건 기록 | 변경은 끝의 `ADD` 하나 |
+| 방법                              | 적용한 곳      | 효과                          |
+| ------------------------------- | ---------- | --------------------------- |
+| 1. 목록은 끝에만 추가                   | 게임의 사건 기록  | 변경은 끝의 `ADD` 하나             |
 | 2. 다른 항목이 같은 자리에 오면 감싸는 태그를 다르게 | 선택지와 회식 버튼 | `REPLACE`로 새 노드, 포커스 넘어감 차단 |
-| 3. 입력창은 바뀌는 목록 밖에 배치 | 발표 화면 | 입력창 번호 고정, 포커스 유지 |
+| 3. 입력창은 바뀌는 목록 밖에 배치            | 발표 화면      | 입력창 번호 고정, 포커스 유지           |
 
 **1. 목록은 끝에만 추가**
 
@@ -393,12 +390,12 @@ parent.insertBefore(movedNode, parent.childNodes[change.index]);
 
 **회피 (현재 적용)**
 
-| 방법 | 내용 |
-|---|---|
-| 1. Lifting State Up | 상태는 루트에만, 자식은 Props만 받는 순수 함수 |
-| 2. 이벤트는 함수로 전달 | 자식은 Props로 받은 함수 호출로 상태 변경 요청 |
-| 3. 무거운 계산 보호 | `useMemo`로 deps가 같으면 재계산 생략 |
-| 4. 규칙 위반 차단 | 자식이나 렌더 밖의 Hook, Hook 개수와 순서 변경 → 오류 |
+| 방법                  | 내용                                   |
+| ------------------- | ------------------------------------ |
+| 1. Lifting State Up | 상태는 루트에만, 자식은 Props만 받는 순수 함수        |
+| 2. 이벤트는 함수로 전달      | 자식은 Props로 받은 함수 호출로 상태 변경 요청        |
+| 3. 무거운 계산 보호        | `useMemo`로 deps가 같으면 재계산 생략          |
+| 4. 규칙 위반 차단         | 자식이나 렌더 밖의 Hook, Hook 개수와 순서 변경 → 오류 |
 
 **1, 2. 값은 내려가고 사건은 올라감**
 
@@ -461,8 +458,8 @@ flowchart TB
 ```
 
 - 인스턴스마다 `hooks` 보유 → 우유의 상태가 바뀌면 우유 `Item`만 다시 실행 (주황색)
-- 사과를 지워도 key로 인스턴스를 찾으므로 빵은 자기 `hooks`를 그대로 유지 → 3.2의 칸 어긋남 해결
-- key가 있어야 인스턴스를 찾을 수 있음 → 4.1과 함께 필요
+- 사과를 지워도 key로 인스턴스를 찾으므로 빵은 자기 `hooks`를 그대로 유지 → 칸 어긋남 해결
+- key가 있어야 인스턴스를 찾을 수 있음 → key 비교와 함께 구현 필요
 - 범위: `h`, `FunctionComponent`, `diff` 모두 수정, 과제 제약("Hook과 State는 루트 컴포넌트에서만") 밖이라 미구현
 
 ## 실행
