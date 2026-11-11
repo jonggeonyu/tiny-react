@@ -59,6 +59,8 @@ button.primary:disabled { color: #7b86cc; background: #f1f2fb; border-color: #c4
 
 .status-row { min-height: 1.6em; margin-bottom: 14px; }
 .status { margin: 0; color: var(--accent); font-size: .88rem; }
+.history-status { margin: 8px 0; padding: 10px 14px; border-radius: 9px; color: var(--accent); background: var(--danger-soft); font-size: .88rem; }
+.history-status[data-outcome="recovery-failed"] { color: var(--danger); font-weight: 700; }
 .status[data-state="error"] { color: var(--danger); }
 .error { margin: 8px 0 0; padding: 10px 14px; border-radius: 9px; color: var(--danger); background: var(--danger-soft); font-size: .88rem; }
 
@@ -93,6 +95,8 @@ button.primary:disabled { color: #7b86cc; background: #f1f2fb; border-color: #c4
 .comparison-notice { margin: 4px 0 16px; padding: 14px 16px; border-radius: 10px; background: var(--accent-soft); color: #34408f; font-weight: 650; }
 .comparison-notice:empty { display: none; }
 .compare-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.compare-grid > article { min-width: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 16px 18px; }
+.compare-grid > article h3 { margin: 0 0 12px; color: var(--ink-soft); font-size: .95rem; }
 .placeholder { border: 1px dashed var(--line-strong); border-radius: 12px; background: repeating-linear-gradient(135deg, #fcfcfe 0 10px, #f8f9fc 10px 20px); padding: 16px 18px; color: var(--muted); font-size: .85rem; }
 .placeholder p { margin: 0 0 8px; }
 .placeholder p:last-child { margin-bottom: 0; }
@@ -151,3 +155,56 @@ footer { color: var(--faint); margin-top: 30px; font-size: .76rem; }
   .history .counter { grid-column: 1 / -1; grid-row: 1; text-align: center; }
   .history button { justify-content: center; white-space: nowrap; padding: 9px 10px; }
 }
+[data-diff-line] {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: monospace;
+}
+
+[data-diff="removed"] {
+  background: #fff0f0;
+  color: #8b2525;
+}
+
+[data-diff="added"] {
+  background: #e8f8eb;
+  color: #175d2b;
+}
+
+[data-diff="removed"]::before { content: attr(data-old-line) " − "; }
+[data-diff="added"]::before { content: attr(data-new-line) " + "; }
+/* 문맥 줄도 각 열의 HTML 기준 번호 하나만 보인다. */
+[data-diff-side="old"] [data-diff="context"]::before { content: attr(data-old-line) "   "; }
+[data-diff-side="new"] [data-diff="context"]::before { content: attr(data-new-line) "   "; }
+.diff-side-name { margin: 0 0 4px; font-size: .78rem; font-weight: 600; color: var(--faint); }
+[data-testid="patch-progress"] { color: var(--faint); }
+[data-diff-highlight] { background: #ffcf78; }
+.diff-view { max-height: 32rem; overflow: auto; }
+.diff-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
+[data-change-before], [data-change-after], [data-declaration-before], [data-declaration-after] {
+  overflow-wrap: anywhere;
+}
+[data-whitespace], .whitespace-symbol {
+  color: #76205f;
+  font-weight: bold;
+}
+
+[data-testid="vdom-diff"] { overflow-wrap: anywhere; }
+
+/* Virtual DOM 요약과 변경 항목을 줄 단위로 구분한다. */
+[data-testid="vdom-diff"] .vdom-summary { margin: 0 0 10px; font-weight: 700; }
+[data-testid="vdom-diff"] .vdom-summary-details { margin: 0 0 16px; padding-left: 20px; color: var(--ink-soft); }
+[data-testid="vdom-diff"] .vdom-summary-details li { margin: 4px 0; white-space: pre-wrap; }
+[data-testid="vdom-diff"] .vdom-changes { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
+[data-vdom-change] { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
+.vdom-change-title, [data-change-location], [data-change-path] { display: block; }
+.vdom-change-title { color: var(--ink); margin-bottom: 4px; }
+[data-change-location] { color: var(--ink-soft); margin-bottom: 8px; }
+[data-change-path] { color: var(--muted); font-size: .75rem; margin-top: 8px; }
+.vdom-value { margin: 5px 0; color: var(--ink-soft); font-size: .85rem; }
+[data-change-before], [data-change-after], [data-declaration-before], [data-declaration-after] { display: block; padding: 6px 8px; border-radius: 5px; font-family: ui-monospace, Consolas, monospace; max-width: 100%; }
+[data-change-before], [data-declaration-before] { background: var(--del-soft); color: var(--del); }
+[data-change-after], [data-declaration-after] { background: var(--add-soft); color: var(--add); }
+[data-absent] { font-style: italic; }
+[data-vdom-change] > ul { margin: 10px 0 0; padding-left: 20px; }
+[data-style-declaration] { margin-top: 8px; }

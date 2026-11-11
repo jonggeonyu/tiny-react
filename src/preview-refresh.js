@@ -1,5 +1,6 @@
-import { inspectHtml } from './html-validation.js';
+import { inspectHtml, renderDiagnostics, errorDiagnostic } from './html-validation.js';
 import { createVirtualRoot } from './vdom.js';
+import { renderVirtualRoot } from './render.js';
 
 const controls = 'input, textarea, select';
 
@@ -59,7 +60,7 @@ function labelFor(element) {
   return '입력창';
 }
 
-function prepareCarryOver(oldHtml, preview, next) {
+export function prepareCarryOver(oldHtml, preview, next) {
   const oldTemplate = document.createElement('template');
   oldTemplate.innerHTML = oldHtml;
   const oldNodes = Array.from(oldTemplate.content.querySelectorAll(controls));
@@ -134,40 +135,56 @@ export function setupPreviewRefresh() {
   const description = document.querySelector('[data-testid="carry-over-description"]');
   let previewHtml = editor.value;
   let pending = null;
+  let recoverySnapshot = null;
+  let busy = false;
+  let discardPreviousFormState = false;
 
   function updateStale() {
-    const stale = editor.value !== previewHtml;
+    const stale = discardPreviousFormState || recoverySnapshot !== null || editor.value !== previewHtml;
     staleNotice.hidden = !stale;
     preview.inert = stale;
-    button.disabled = !stale;
+    button.disabled = busy || !stale;
     dialog.hidden = true;
     pending = null;
   }
 
   function commit(candidate, html) {
+    const snapshot = recoverySnapshot || { tree: createVirtualRoot(preview), html: previewHtml, discardPreviousFormState };
     const selections = Array.from(candidate.querySelectorAll('select'), (element) => ({
       element,
       index: element.selectedIndex,
       selected: Array.from(element.options, (option) => option.selected),
     }));
     const radios = Array.from(candidate.querySelectorAll('input[type="radio"]'), (element) => ({ element, checked: element.checked }));
-    preview.replaceChildren(...candidate.childNodes);
-    for (const { element, index, selected } of selections) {
-      if (element.multiple) {
-        selected.forEach((value, optionIndex) => {
-          element.options[optionIndex].selected = value;
-        });
-      } else {
-        element.selectedIndex = index;
+    try {
+      preview.replaceChildren(...candidate.childNodes);
+      for (const { element, index, selected } of selections) {
+        if (element.multiple) {
+          selected.forEach((value, optionIndex) => {
+            element.options[optionIndex].selected = value;
+          });
+        } else {
+          element.selectedIndex = index;
+        }
       }
-    }
-    for (const { element, checked } of radios) {
-      element.checked = checked;
+      for (const { element, checked } of radios) {
+        element.checked = checked;
+      }
+    } catch (error) {
+      try {
+        restoreSnapshot(snapshot);
+      } catch {
+        // 복구 데이터는 이후 갱신이나 이력 이동에 사용할 수 있도록 유지한다.
+      }
+      throw error;
     }
     previewHtml = html;
+    discardPreviousFormState = false;
+    recoverySnapshot = null;
     dialog.hidden = true;
     pending = null;
     updateStale();
+    host.dispatchEvent(new CustomEvent('preview-refresh-result', { detail: 'success' }));
   }
 
   editor.addEventListener('input', () => {
@@ -175,47 +192,109 @@ export function setupPreviewRefresh() {
     warnings.hidden = true;
     updateStale();
   });
-  button.addEventListener('click', () => {
+  function refresh() {
     const html = editor.value;
-    if (html === previewHtml) {
+    if (html === previewHtml && !recoverySnapshot && !discardPreviousFormState) {
       return;
     }
     errors.hidden = true;
     warnings.hidden = true;
     const notices = [];
+    let checkingInput = true;
     try {
       inspectHtml(html, notices);
-      warnings.textContent = notices.join(' ');
-      warnings.hidden = notices.length === 0;
+      renderDiagnostics(warnings, notices);
       const template = document.createElement('template');
       template.innerHTML = html;
       createVirtualRoot(template.content);
-      const losses = prepareCarryOver(previewHtml, preview, template.content);
-      if (losses.counts.size || losses.emptySelectionMayBeLost) {
+      checkingInput = false;
+      let source = preview;
+      if (recoverySnapshot) {
+        source = document.createElement('div');
+        source.appendChild(renderVirtualRoot(recoverySnapshot.tree, document));
+      }
+      const losses = discardPreviousFormState
+        ? { counts: new Map(), emptySelectionMayBeLost: false }
+        : prepareCarryOver(previewHtml, source, template.content);
+      if (losses.counts.size || losses.emptySelectionMayBeLost || recoverySnapshot) {
         const counts = Array.from(losses.counts, ([type, count]) => `${type} ${count}개`).join(', ');
         const countNotice = counts ? `이월하지 못하는 입력값: ${counts}. ` : '';
         const emptyNotice = losses.emptySelectionMayBeLost ? '다중 선택의 선택 없음 상태를 유지하지 못할 수 있음. ' : '';
-        description.textContent = `${countNotice}${emptyNotice}계속하면 이 상태는 사라질 수 있습니다.`;
+        const recoveryNotice = recoverySnapshot ? '이전 미리보기를 복원하지 못했습니다. 이전 입력값이 사라질 수 있습니다. ' : '';
+        description.textContent = `${recoveryNotice}${countNotice}${emptyNotice}계속하면 이 상태는 사라질 수 있습니다.`;
         pending = { candidate: template.content, html };
         dialog.hidden = false;
+        host.dispatchEvent(new CustomEvent('preview-refresh-pending'));
       } else {
         commit(template.content, html);
       }
     } catch (error) {
-      warnings.textContent = notices.join(' ');
-      warnings.hidden = notices.length === 0;
-      errors.textContent = `입력 오류: ${error.message}`;
-      errors.hidden = false;
+      renderDiagnostics(warnings, notices);
+      if (checkingInput) {
+        renderDiagnostics(errors, [errorDiagnostic(error)]);
+      } else {
+        errors.textContent = '미리보기를 갱신하지 못했습니다. 다시 시도해 주세요.';
+        errors.hidden = false;
+      }
+      host.dispatchEvent(new CustomEvent('preview-refresh-result', { detail: checkingInput ? 'invalid' : 'render-failed' }));
     }
-  });
+  }
+  button.addEventListener('click', refresh);
   document.querySelector('[data-testid="carry-over-continue"]').addEventListener('click', () => {
     if (pending && pending.html === editor.value) {
-      commit(pending.candidate, pending.html);
+      try {
+        commit(pending.candidate, pending.html);
+      } catch {
+        dialog.hidden = true;
+        pending = null;
+        errors.textContent = '미리보기를 갱신하지 못했습니다. 다시 시도해 주세요.';
+        errors.hidden = false;
+        host.dispatchEvent(new CustomEvent('preview-refresh-result', { detail: 'render-failed' }));
+      }
     }
   });
   document.querySelector('[data-testid="carry-over-cancel"]').addEventListener('click', () => {
     pending = null;
     dialog.hidden = true;
+    host.dispatchEvent(new CustomEvent('preview-refresh-result', { detail: 'cancelled' }));
   });
+  function restoreSnapshot(snapshot) {
+    recoverySnapshot = snapshot;
+    previewHtml = snapshot.html;
+    discardPreviousFormState = snapshot.discardPreviousFormState || false;
+    try {
+      preview.replaceChildren(renderVirtualRoot(snapshot.tree, document));
+    } catch (error) {
+      updateStale();
+      throw error;
+    }
+    recoverySnapshot = null;
+    updateStale();
+  }
+
   updateStale();
+  return {
+    isStale: () => discardPreviousFormState || recoverySnapshot !== null || editor.value !== previewHtml,
+    hasRecoverySnapshot: () => recoverySnapshot !== null,
+    setBusy(value) {
+      busy = value;
+      button.disabled = busy || !this.isStale();
+    },
+    snapshot: () => recoverySnapshot || ({ tree: createVirtualRoot(preview), html: previewHtml, discardPreviousFormState }),
+    restore: restoreSnapshot,
+    discardFormState() {
+      preview.replaceChildren();
+      discardPreviousFormState = true;
+      updateStale();
+    },
+    setCurrentHtml(html) {
+      previewHtml = html;
+      updateStale();
+    },
+    clearValidation() {
+      errors.hidden = true;
+      warnings.hidden = true;
+    },
+    refresh,
+  };
 }

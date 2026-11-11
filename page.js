@@ -2,9 +2,12 @@
 // 이 파일은 그 결과(이력)를 읽어 상태 문구와 Virtual DOM 보기만 그린다.
 import { history as stateHistory } from './src/main.js';
 import { setupPreviewRefresh } from './src/preview-refresh.js';
+import { setupPatch } from './src/patch-controller.js';
+import { setupEditorKeys } from './src/editor-keys.js';
 
 const statusMessage = document.getElementById('lab-status');
 const treeContainer = document.getElementById('vdom-tree');
+setupEditorKeys(document.getElementById('editor'));
 
 function describeTextNode(node) {
   const isWhitespaceOnly = /^[ \t\n\r\f]*$/.test(node.text);
@@ -79,5 +82,6 @@ if (stateHistory.length === 0) {
   showLoadFailure();
 } else {
   showLoadSuccess(stateHistory[0]);
-  setupPreviewRefresh();
+  const previewController = setupPreviewRefresh();
+  setupPatch(stateHistory, previewController, showVirtualTree);
 }
