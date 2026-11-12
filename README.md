@@ -1,232 +1,233 @@
-﻿# tiny-react
+# tiny-react
 
-## Phase 2 Hook 사용 규칙 (이전 설계 기록)
+바닐라 JavaScript로 만든 미니 UI 라이브러리입니다. 함수형 컴포넌트와 Hook으로 화면을 구성하고, 상태가 바뀌면 Virtual DOM을 비교해 필요한 부분을 실제 DOM에 반영합니다.
 
-아래는 구현 전 작성한 설계 기록입니다. 실제 API와 현재 지원 범위는 아래의 Phase 2 실험실을 확인하세요.
+브라우저의 ES Modules로 소스 파일을 직접 가져와 사용합니다. JSX와 별도 빌드 도구는 사용하지 않습니다. 현재 저장소는 npm 배포 패키지가 아닙니다.
 
-1. Hook은 최상위 함수형 컴포넌트에서만 호출합니다. 자식 컴포넌트는 상태 없이 부모가 전달한 `props`를 사용합니다.
-2. Hook은 컴포넌트 함수의 최상위에서 매번 같은 순서로 호출합니다.
-3. Hook을 조건문이나 반복문 안에서 호출하지 않습니다.
-4. Hook을 이벤트 처리 함수 등 중첩 함수 안에서 호출하지 않습니다.
-5. 조건에 따라 일찍 `return`할 때도 그 전에 모든 Hook을 호출합니다.
+## 빠르게 시작하기
 
-렌더링마다 Hook 호출 개수나 종류가 달라지면 오류로 알리는 방향입니다. 다만 같은 종류의 Hook끼리 순서가 바뀐 경우는 개수와 종류만으로 감지하지 못하므로, 작성 규칙을 함께 지켜야 합니다.
+프로젝트 루트에 아래 파일을 `example.html`로 저장하세요. import 경로는 이 위치를 기준으로 합니다.
 
-이 규칙은 이번 과제의 제약을 포함합니다. 실제 React에서는 자식 컴포넌트도 상태와 Hook을 가질 수 있습니다.
+```html
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8">
+    <title>tiny-react 카운터</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module">
+      import {
+        FunctionComponent,
+        registerArea,
+        registerEvent,
+        useState,
+      } from './src/phase2/index.js';
 
-### 컴포넌트와 자식 호출
+      // 아래 두 함수는 예제에서 정의하는 VDOM 생성 도우미입니다.
+      function text(value) {
+        return {
+          type: 'text', tag: null, attributes: {},
+          text: String(value), children: [], formState: null,
+        };
+      }
 
-첫 버전에서 함수형 컴포넌트는 Virtual DOM 객체를 직접 반환하며, 자식 컴포넌트는 `renderChild(컴포넌트, props)`로 호출하는 방향입니다. 아래는 호출 관계를 보여 주는 개념 예시이며, 실제 Virtual DOM 생성 코드는 생략했습니다.
+      function element(tag, children = [], attributes = {}) {
+        return {
+          type: 'element', tag, attributes,
+          text: null, children, formState: null,
+        };
+      }
 
-루트와 자식 모두 Virtual DOM을 동기적으로 반환해야 합니다. 첫 버전에서는 `async` 컴포넌트처럼 `Promise`를 반환하는 경우 오류로 처리합니다. 비동기 컴포넌트 지원은 추후 검토합니다.
+      function App({ title }) {
+        const [count, setCount] = useState(0);
+        const button = element('button', [text('+1')], { type: 'button' });
+        registerEvent(button, 'click', () => setCount((previous) => previous + 1));
 
-```js
-function App() {
-  const [count, setCount] = useState(0);
+        return element('section', [
+          element('h1', [text(title)]),
+          element('p', [text(`현재 값: ${count}`)]),
+          button,
+        ]);
+      }
 
-  return renderChild(Panel, { count, setCount });
-}
-
-function Panel(props) {
-  return renderChild(Counter, props);
-}
-
-function Counter({ count, setCount }) {
-  // count와 setCount를 이용해 Virtual DOM 객체를 반환합니다.
-}
+      const container = document.querySelector('#app');
+      registerArea('counter', container);
+      const app = new FunctionComponent(App, {
+        onError: (result) => console.error(result),
+      });
+      app.mount(container, { title: '카운터' });
+    </script>
+  </body>
+</html>
 ```
 
-자식에서도 `renderChild()`로 다른 자식을 호출할 수 있지만 Hook은 루트에서만 사용합니다. 자식을 `Counter()`처럼 직접 호출하면 자식 실행 경계를 항상 감지할 수 없으므로, 반드시 `renderChild()`를 사용합니다. 도우미 이름과 예제는 구현 전 설계입니다.
+프로젝트 루트에서 정적 서버를 실행한 뒤 [카운터 예제](http://127.0.0.1:4173/example.html)를 엽니다. Node.js가 필요합니다.
 
-자식 컴포넌트는 전달받은 `props`와 그 안의 객체·배열을 직접 수정하지 않고 읽기 전용으로 사용합니다. 변경이 필요하면 부모가 전달한 상태 변경 함수를 호출하고, 객체나 배열은 기존 값을 수정하지 않은 새 값으로 전달합니다. 첫 버전은 작성 규칙이며 모든 중첩 변경을 자동으로 감지하거나 막는다고 보장하지 않습니다.
+```sh
+node tests/support/static-server.mjs 4173
+```
 
-첫 버전에서는 루트가 다시 렌더링할 때 호출된 자식도 props 변경 여부와 관계없이 다시 실행합니다. 실제 DOM의 변경 여부는 이후 Diff로 판단합니다. props가 같은 자식의 실행을 건너뛰는 최적화는 추후 검토합니다.
+버튼을 누르면 상태가 증가하고 숫자 텍스트가 갱신됩니다. 다른 프로젝트에 가져갈 때는 내부 모듈의 상대 경로가 유지되도록 `src/` 디렉터리를 함께 복사하세요.
 
-`FunctionComponent`는 첫 렌더링에 `mount()`, 갱신에 `update()`, 제거에 `unmount()`를 사용하도록 설계 중입니다. `mount()` 대상은 자식 노드가 전혀 없어야 하며, 공백 텍스트 노드도 자식에 포함됩니다. 제거된 인스턴스를 다시 쓰지 않고 새 인스턴스를 만듭니다.
+## 컴포넌트 API
 
-루트의 생성·mount·명시적 갱신은 다음 형태로 계획하고 있습니다.
+다음 API는 모두 `src/phase2/index.js`에서 가져옵니다.
+
+| API | 설명 |
+| --- | --- |
+| `registerArea(id, container)` | 문자열 식별자로 컴포넌트가 관리할 DOM 영역을 등록합니다. |
+| `new FunctionComponent(App, { onError })` | 함수형 컴포넌트를 실행하고 상태와 렌더링을 관리할 인스턴스를 만듭니다. `onError`는 선택 사항입니다. |
+| `app.mount(container, props = {})` | 등록된 영역에 처음 렌더링합니다. |
+| `app.update(props)` | props를 새 객체로 전체 교체하고 다시 렌더링합니다. 인자를 생략하면 기존 props를 유지합니다. |
+| `app.unmount()` | 화면과 이벤트를 제거하고 Effect 정리를 실행합니다. 제거한 인스턴스는 재사용하지 않습니다. |
+| `renderChild(Child, props = {})` | 렌더링 중 자식 컴포넌트를 실행하고 VDOM을 반환받습니다. |
+| `registerEvent(node, type, handler)` | 렌더링 중 요소 VDOM에 `click`, `input`, `change` 이벤트를 등록합니다. |
+
+첫 mount 대상은 문서에 연결된 빈 요소여야 합니다. 내부에 공백이나 줄바꿈 텍스트도 없어야 하며, 여러 루트의 관리 영역은 서로 겹칠 수 없습니다.
 
 ```js
-const app = new FunctionComponent(App);
-
-app.mount(container, { title: "내 카운터" });
-app.update({ title: "새 제목" });
+// 빠르게 시작하기 예제의 app 인스턴스를 사용합니다.
+app.update({ title: '새 제목' });
 app.update();
 app.unmount();
 ```
 
-- `mount(container, props)`는 선택적인 루트 props를 전달합니다. props를 생략하면 빈 객체 `{}`를 사용합니다.
-- `update(새 props)`는 기존 props를 **전체 교체**하고 다시 렌더링합니다. 예를 들어 `{ title }`만 전달하면 기존 `color`는 유지되지 않습니다. 렌더링·DOM 및 이벤트 반영에 실패하면 이전 props와 화면을 복구합니다. 반영이 확정된 뒤 발생한 Effect 오류는 별도로 처리합니다.
-- `update()`는 현재 props를 유지하고, 상태가 바뀌지 않았더라도 명시적으로 다시 렌더링합니다. `update({})`는 props를 빈 객체로 교체합니다.
-- 루트의 DOM 복구에 실패하면 해당 루트의 `setState`와 `update()`를 제한하고 새로고침을 안내합니다. 다른 독립 루트는 계속 사용할 수 있습니다. 오류 처리가 끝난 뒤 `unmount()`는 허용해 DOM 제거와 이벤트·Effect 자원 정리를 시도합니다. 제거에 실패하면 정리가 완료됐다고 가정하지 않습니다.
-- 첫 `mount()` 도중 일부 DOM이 만들어지고 복구까지 실패한 경우에는 정식 mount가 완료되지 않았어도 예외적으로 `unmount()`를 허용해 잔여 DOM과 이벤트 정리를 시도합니다. 일반적인 mount 전 `unmount()`는 오류입니다. 정리가 성공해 unmount된 인스턴스는 다시 사용하지 않습니다.
-- 복구 실패 후 `unmount()`의 제거와 정리가 모두 성공하면 테스트 페이지가 반환 결과를 확인해 해당 루트의 DOM 복구 실패 안내를 없애고, 필요하면 새 인스턴스를 mount할 수 있습니다. `onError`가 성공을 자동으로 알려 주지는 않습니다. 별도의 Effect 차단 등 다른 지속 오류가 함께 있다면 이 성공만으로 자동 해제한다고 가정하지 않습니다.
-- 복구 실패 후 `unmount()`에서 DOM 제거는 확정됐지만 Effect 정리가 실패했다면, 이전 DOM 복구 실패 안내 대신 화면은 제거됐지만 일부 작업을 정리하지 못했으며 새로고침이 필요하다고 안내합니다. 다른 원인의 지속 오류를 함께 표시해야 하는 기존 규칙은 유지합니다.
-- 첫 버전은 실패한 Effect 정리 함수를 자동 재시도하지 않습니다. DOM 제거 후 Effect 정리가 실패한 영역에는 새로고침 전까지 새 루트를 mount하지 않습니다. 독립된 다른 영역의 루트는 계속 사용할 수 있습니다. 새로고침이 외부 자원까지 정리한다고 보장하지는 않습니다.
-- 이 제한은 제거된 컴포넌트 인스턴스에만 저장하지 않고 페이지 수명 동안 유지하는 별도의 영역 관리 목록으로 관리합니다. 프로그램이 mount할 논리적인 영역을 식별자로 관리하고 현재 DOM 대상에 연결하므로, DOM 객체가 교체돼도 같은 영역의 제한 상태를 유지할 수 있습니다. 사용자가 편집하는 HTML의 `id`를 필수로 요구하는 것은 아닙니다. 교체된 DOM과 영역을 연결하는 절차 및 겹침 판정은 설계 중입니다.
-- 영역 등록과 컴포넌트 mount는 분리합니다. 예를 들어 `registerArea("counter", container)`로 논리 영역을 DOM에 연결한 뒤 기존 `app.mount(container, props)` 형태를 사용합니다. 첫 버전은 등록된 대상만 mount할 수 있으며 등록되지 않은 대상은 오류로 알립니다. 대상이 교체되면 같은 식별자와 새 DOM으로 다시 등록합니다. 등록만으로 새 DOM이 이전 논리 영역을 대체하는지 자동 판별할 수 없으므로 페이지가 같은 영역에 같은 식별자를 사용해야 합니다. 현재 동작은 아래 Phase 2 실험실과 구현을 확인하세요.
-- 첫 버전은 문서에 연결된 대상만 mount·갱신합니다. 대상이 떨어졌다면 갱신을 막고 새 대상을 등록하도록 안내합니다. 정리가 필요한 기존 인스턴스의 `unmount()`까지 일괄 금지하는 것은 아닙니다. `isConnected`만으로 모든 외부 DOM 변경이나 논리 영역의 동일성을 판별할 수는 없습니다.
-- 활성 루트의 대상 DOM이 교체되면 페이지가 새 DOM 중 루트가 관리할 하위 영역을 명시적으로 지정합니다. 지정된 영역의 자식 전체는 루트가 관리해도 된다고 페이지가 보장하고, 관계없는 요소는 그 영역 밖에 둡니다. 지정된 영역 밖의 페이지 요소는 Diff·Patch 대상이 아닙니다. 기존 컴포넌트 상태를 유지하며 지정된 영역의 현재 DOM을 읽어 목표 화면과 비교하고 프로그램 이벤트를 연결하는 방향입니다. 일반적인 첫 mount의 빈 대상 조건과는 구분합니다.
-- 첫 버전에서 페이지는 교체된 관리 영역 내부 노드에 라이브러리가 추적하지 않는 외부 이벤트 리스너가 없다고 보장합니다. 기존 노드의 리스너를 일반적으로 전부 열거할 수 없으므로 라이브러리가 이 약속을 완전히 검사한다고 보장하지 않습니다. 이를 전제로 기존 노드를 비교·재사용합니다. 관리 영역 밖의 리스너에 대한 이벤트 전파는 별도 정책과 브라우저 규칙을 따릅니다.
-- 새 대상 반영을 확정한 뒤 기존 Effect를 정리하고 새 DOM을 기준으로 다시 실행합니다. 이 경우는 같은 인스턴스의 `[]` Effect도 다시 실행하는 명시적 예외입니다. Effect 정리·실행 오류는 기존 차단·안내 규칙을 따릅니다. 이미 이전 DOM이 화면에서 제거된 경우 교체 실패 시 이전 화면이 원래 자리에 보인다고 보장하지 않습니다.
-- 이전 `update()`에서 실패한 정리도 `unmount()`에서 자동 재시도하지 않습니다. 이후 DOM 제거와 나머지 정리가 성공해도 이전 정리가 해결되지 않았다면 `unmount()`는 `committed: true`, `ok: false`, `reason: "cleanup-unresolved"`로 이를 알리고 해당 영역의 새 mount 제한을 유지합니다.
-- 결과의 `errors`에는 이번 호출에서 발생한 오류만 담고, 해결되지 않은 이전 오류는 `previousErrors`로 구분해 전달합니다. 오류가 처음 발생한 작업과 이번 호출을 혼동하지 않도록 하기 위한 규칙입니다.
-- `cleanup-unresolved`는 이번 호출에 새 오류가 없어도 `previousErrors`와 함께 `onError`로 한 번 전달합니다. 테스트 페이지는 이를 이용해 화면은 제거됐지만 일부 정리가 해결되지 않았다는 안내로 갱신합니다.
-- 루트 props 전체는 일반 객체로 전달합니다. 문자열이나 배열은 오류로 처리하며, 속성 값으로는 함수나 객체도 사용할 수 있습니다. 전달받은 바깥 객체는 복사하지만 내부 객체와 함수는 참조를 유지하므로 직접 수정하지 않아야 합니다.
-- 첫 버전에서는 각 루트의 렌더링이나 Effect·정리 함수가 직접 실행되는 동안 그 루트에 대한 `update()` 또는 `unmount()`를 호출하면 오류로 처리합니다. 독립된 다른 루트는 실행할 수 있도록 설계합니다. 중첩 호출에서 실행 문맥과 오류 처리는 구현 시 검증해야 합니다.
-- `mount()`, `update()`, `unmount()`와 `useState`가 반환하는 상태 변경 함수는 작업 결과를 공통 형식으로 반환하는 방향입니다. 정상적인 호출 중 작업이 실패하면 오류를 안내하고 호출자가 결과를 확인할 수 있습니다. 한 루트의 Effect가 다른 루트의 갱신을 호출했을 때, 호출받은 루트의 처리된 작업 오류만으로 호출한 Effect를 중단하지 않습니다.
-- 결과에는 성공 여부 `ok`와 새 화면·상태의 확정 여부 `committed`를 담습니다. 확정 전 실패 시 `recovery`는 `not-needed`, `restored`, `failed`로 복구 상태를 구분합니다. `failed`면 새 상태가 확정되지 않았더라도 실제 화면은 불확실할 수 있습니다. 오류들은 발생 순서대로 `errors`에 담으며, 각 항목에 `phase`와 오류 정보를 포함합니다.
-- 첫 버전의 오류 단계는 `state`(상태 업데이트 계산), `render`(컴포넌트·Hook 및 VDOM 생성), `diff`(VDOM 비교), `patch`(DOM 반영), `event`(이벤트 연결·해제), `recovery`(복구), `cleanup`(Effect 정리), `effect`(Effect 실행)로 구분합니다. `event` 단계는 연결·해제 오류이며, 이후 사용자 조작으로 실행된 이벤트 처리 함수의 동기 오류와는 별도로 다룹니다.
-- `errors`에는 단계와 함께 표시용 메시지 및 원래 오류 값을 보관합니다. JavaScript에서는 `Error` 객체 외에 문자열 등도 오류로 던질 수 있으므로 사용자에게 보여 줄 메시지는 일관된 형태로 준비합니다. 원래 값을 보존해 원인 확인에도 활용할 수 있도록 합니다.
-- DOM 제거 후 Effect 정리에 실패한 `unmount()`처럼 화면 변경이 이미 확정된 뒤 발생한 오류는 `ok: false`, `committed: true`로 구분합니다. mount 이전의 `update()`처럼 잘못된 호출 순서는 결과 대신 JavaScript 예외를 던집니다. 다른 루트의 Effect에서 그 예외를 잡지 않으면 호출한 Effect도 실패할 수 있습니다. 정상적인 호출 중 발생한 렌더링·Patch 실패를 결과로 전달하는 경우와 구분합니다.
-- `new FunctionComponent(App, { onError })`처럼 오류 전달 함수를 등록하는 방향입니다. 한 작업에서 여러 오류가 나면 필요한 정리·복구를 마친 뒤 오류들을 모아 `onError`를 한 번 호출합니다. 페이지는 전달받은 정보를 사용자 안내 UI에 연결합니다. `onError` 자체가 실패하면 원래 작업 결과를 유지하고 원래 오류와 전달 함수의 오류를 콘솔에 남깁니다. 이때 페이지 안내가 표시된다고 보장하지 않습니다.
-- 첫 버전에서는 해당 루트의 `onError`가 직접 실행되는 동안 그 루트의 상태 변경·`update()`·`unmount()` 호출을 제한합니다. 독립된 다른 루트는 자신의 실행 상태에 따른 제한을 적용합니다.
-- `onError`에는 오류가 발생한 작업 종류와 오류 목록을 전달합니다. 해당하는 경우 화면·상태 확정 여부와 복구 상태, 이벤트 처리 중 발생했다면 이벤트 종류 같은 정보도 함께 전달합니다. `setState`가 내부적으로 `update()`를 거쳐도 동일한 상태 변경 작업의 오류는 중복 통지하지 않습니다. 세부 필드명과 작업 종류 값은 구현 전 결정합니다.
-- `onError` 등록은 선택 사항입니다. 등록하지 않으면 오류를 개발자 콘솔에 남기며 페이지에 사용자 안내가 자동으로 만들어지지는 않습니다. 이 프로젝트의 테스트 페이지는 `onError`를 연결해 Effect 차단 등 사용자가 알아야 할 오류를 안내하도록 설계합니다.
-- 중복 이벤트 등록이나 제거된 컴포넌트의 상태 변경 요청 같은 경고는 `onError`와 구분해 개발자 콘솔에만 표시합니다. 별도의 `onWarning` 전달 방식은 추후 검토합니다.
-- 테스트 페이지의 오류 안내 영역은 각 `FunctionComponent`가 관리하는 DOM 영역 밖에 둡니다. 컴포넌트 DOM 복구가 실패해도 `onError`가 별도 영역에 안내를 표시할 수 있도록 하기 위함입니다. 표시 성공 자체는 보장하지 않습니다.
-- 테스트 페이지는 사용자 오류 안내를 `onError`에서만 표시하고, 반환 결과는 호출 코드의 성공·실패 판단이나 디버깅에 사용합니다. 같은 오류를 콜백과 반환값 양쪽에서 중복 표시하지 않습니다.
-- 여러 루트에서 오류가 발생하면 안내를 루트별로 따로 표시합니다. 한 루트의 오류가 다른 루트의 지속적인 Effect 차단·새로고침 안내를 덮어쓰지 않도록 합니다.
-- 같은 루트에서 추가 오류가 발생해도 지속적인 Effect 차단 안내를 덮어쓰지 않고 새 오류와 함께 표시합니다.
-- 같은 루트에서 `effect-blocked` 상태가 반복 전달돼도 새로고침 안내는 하나만 유지하고, 별도의 새 오류는 추가로 표시합니다.
-- Effect 차단처럼 새로고침이 필요한 지속적인 안내는 닫을 수 없게 유지합니다. 버튼 처리 함수의 일시적인 오류처럼 계속 사용할 수 있는 안내는 사용자가 확인한 뒤 닫을 수 있습니다. 닫기는 안내 표시만 바꿉니다.
-- 컴포넌트가 `null`을 반환하면 아무 노드도 표시하지 않습니다. 루트가 `null`을 반환해도 인스턴스와 상태는 유지되며, `unmount()`할 때 제거합니다. VDOM이 아닌 `undefined`나 문자열은 첫 버전에서 오류로 처리합니다.
+컴포넌트는 요소·텍스트 VDOM 객체 또는 `null`을 동기적으로 반환합니다. `null`은 화면을 비우면서 인스턴스와 상태를 유지합니다. VDOM 객체는 위 예제의 `type`, `tag`, `attributes`, `text`, `children`, `formState` 구조를 사용하며, 속성 값은 문자열로 전달합니다.
 
-첫 버전은 독립된 루트 컴포넌트 여러 개를 지원하되, 각 루트의 관리 DOM 영역은 겹치지 않아야 합니다. 영역이 겹치는 곳에 mount하면 오류로 처리하며, 중첩 루트의 영역 위임은 추후 검토합니다.
-
-### 프로그램 이벤트 등록
-
-프로그램에서 만든 요소 VDOM은 렌더링 중 `registerEvent(노드, 이벤트종류, 함수)`로 이벤트를 등록하는 방향입니다. 실제 DOM 연결은 렌더링과 Patch를 거쳐 수행합니다. 편집기 HTML의 `onclick` 같은 문자열 속성은 Phase 1에서 지원하지 않으며 이 기능과 구분합니다.
+자식 컴포넌트는 props와 콜백으로 부모의 상태를 사용합니다. 아래는 빠르게 시작하기 예제의 `text`, `element` 도우미를 사용하는 예입니다.
 
 ```js
-function handleClick(event) {
-  // 브라우저의 이벤트 객체를 사용할 수 있습니다.
+import { renderChild, registerEvent, useState } from './src/phase2/index.js';
+
+function CounterButton({ count, onIncrement }) {
+  const button = element('button', [text(`현재 값: ${count}`)]);
+  registerEvent(button, 'click', onIncrement);
+  return button;
 }
 
-// button은 컴포넌트가 만든 요소 VDOM 객체라고 가정합니다.
-registerEvent(button, "click", handleClick);
-```
-
-- 첫 버전은 `click`, `input`, `change`를 지원합니다. 대상은 요소 노드이며 텍스트 노드와 가상 루트에는 등록할 수 없습니다.
-- `registerEvent()`는 루트 또는 자식의 렌더링 중에만 호출합니다. 잘못된 호출 시점, 지원하지 않는 이벤트, 요소가 아닌 대상 또는 함수가 아닌 처리 함수는 오류로 알리는 방향입니다.
-- 같은 노드의 같은 이벤트를 중복 등록하면 경고하고 마지막 함수를 사용합니다. 같은 VDOM 객체가 여러 위치에 사용되면 각 위치의 실제 노드에 이 함수를 연결합니다. 최종 트리에 없는 노드의 등록은 해당 렌더링에서 무시합니다.
-- 처리 함수의 동기 오류는 알리고 현재 화면을 유지합니다. 오류가 난 이벤트는 그 지점에서 `stopPropagation()`으로 전파를 중단합니다. 이미 실행된 캡처 리스너는 되돌릴 수 없고, 같은 요소의 다른 리스너는 이것만으로 자동 중단되지 않습니다. 오류를 이유로 `preventDefault()`를 자동 호출하지 않으므로 기본 동작은 다른 코드나 브라우저의 별도 규칙이 취소하지 않은 경우 그대로 진행될 수 있습니다. 비동기 작업의 실패 감지는 추후 개선 사항입니다.
-- 이벤트 함수 안에서 `setState`가 실패 결과를 반환했더라도 함수 자체가 예외를 던진 것이 아니라면 이벤트 전파를 자동으로 중단하지 않습니다. 처리 함수가 결과를 확인한 뒤 필요하면 직접 `event.stopPropagation()`을 호출합니다. 함수 자체가 동기 예외를 던진 경우의 자동 전파 중단 규칙은 유지합니다.
-
-### 상태 사용: `useState`
-
-아래 코드는 구현 전 계획한 사용 형태를 설명하는 예시입니다. 현재 실행 가능한 사용 예제는 아래 Phase 2 실험실을 확인하세요.
-
-```js
 function App() {
   const [count, setCount] = useState(0);
-
-  function handleClick() {
-    setCount((previous) => previous + 1);
-  }
-
-  // count와 handleClick을 자식 컴포넌트에 props로 전달합니다.
+  return renderChild(CounterButton, {
+    count,
+    onIncrement: () => setCount((previous) => previous + 1),
+  });
 }
 ```
 
-- 첫 렌더링에서 초기값 `0`을 저장하고, 이후 렌더링에서는 저장된 상태를 읽습니다.
-- `setCount(5)`처럼 새 값을 직접 전달하거나 `setCount((previous) => previous + 1)`처럼 이전 값으로 새 값을 계산할 수 있습니다. 해당 루트가 렌더링 중일 때 그 루트의 상태 변경 함수를 호출하면 오류로 처리할 계획입니다.
-- 초기값으로 함수를 전달하면 첫 초기화 때 실행해 반환값을 사용합니다. 함수 자체를 상태로 저장하려면 `useState(() => someFunction)` 또는 `setState(() => someFunction)`처럼 한 번 더 감쌉니다. 업데이트 함수가 실행되는 동안 다른 상태 변경 함수를 호출하지 않습니다.
-- 이전 값과 새 값이 `Object.is`로 같으면 렌더링을 요청하지 않습니다. 객체는 내용이 아닌 참조를 비교하므로, 기존 객체를 직접 수정하지 말고 새 객체를 만들어 전달합니다.
-- 같은 상태값으로 렌더링을 생략한 상태 변경 함수는 `{ ok: true, committed: false, reason: "unchanged", errors: [] }`를 반환하는 방향입니다. 오류가 아니라 새로 확정할 변경이 없었다는 뜻입니다.
-- 제거된 컴포넌트의 오래된 상태 변경 함수는 요청을 무시하고 경고하며, `ok: false`, `committed: false`, `reason: "unmounted"`를 반환합니다. 이 경우 DOM 변경 전 무시하므로 복구가 필요하지 않습니다.
+## Hook API
+
+Hook은 **루트 컴포넌트의 최상위에서 매번 같은 순서로** 호출합니다. 조건문·반복문·이벤트 처리 함수 안이나 자식 컴포넌트에서는 호출하지 않습니다. 이는 이번 과제의 제약입니다.
+
+### `useState(initialValue)`
+
+상태와 상태 변경 함수를 반환합니다. 초기값으로 함수를 전달하면 최초 렌더링 때 실행합니다. 변경 함수에는 새 값 또는 이전 상태로 새 값을 계산하는 함수를 전달합니다.
 
 ```js
-// 기존 상태 객체를 직접 바꾸지 않고 새 객체를 만듭니다.
-setProfile((previous) => ({
-  ...previous,
-  name: "지민",
-}));
-```
-
-첫 버전에서는 상태가 바뀔 때마다 즉시 렌더링합니다. 여러 상태 변경을 모아 한 번에 처리하는 배칭은 추후 개선 사항입니다. 렌더링은 새 Virtual DOM을 만들고 Diff 후 필요한 DOM만 Patch하는 흐름으로 계획하고 있습니다.
-
-이미 실행 중인 이벤트 함수는 그 함수가 만들어졌을 때의 `count`를 사용합니다. 예를 들어 아래 함수가 `count`가 0일 때 만들어졌다면, 첫 호출 후 다시 렌더링하더라도 두 번째 줄의 `count`는 여전히 0이므로 최종 상태는 1입니다.
-
-```js
-function handleClick() {
-  setCount(count + 1);
-  setCount(count + 1);
-}
-```
-
-직전에 저장된 상태를 기준으로 연속해서 변경하려면 함수형 업데이트를 사용할 수 있습니다. 첫 버전은 배칭하지 않으므로 아래 두 호출은 각각 즉시 렌더링하며, 0에서 시작하면 최종 상태는 2입니다.
-
-```js
-setCount((previous) => previous + 1);
+const [count, setCount] = useState(0);
+// 아래 호출은 이벤트 처리 함수 등에서 실행합니다.
+setCount(1);
 setCount((previous) => previous + 1);
 ```
 
-### 화면 반영 후 작업: `useEffect`
+변경은 동기적으로 반영하며 배칭하지 않습니다. 이전 값과 `Object.is`로 같으면 다시 렌더링하지 않습니다. 객체와 배열은 직접 수정하지 말고 새 값으로 전달하세요.
+
+### `useEffect(effect, dependencies?)`
+
+DOM과 이벤트 반영이 확정된 뒤 실행할 작업을 등록합니다. 정리 함수를 반환하면 다음 실행 전과 unmount 때 호출합니다.
 
 ```js
-// 컴포넌트의 첫 화면이 성공적으로 반영된 뒤 실행합니다.
 useEffect(() => {
-  // 실행할 작업
+  const timer = setInterval(() => console.log('실행 중'), 1000);
+  return () => clearInterval(timer);
 }, []);
-
-// count가 바뀐 화면이 성공적으로 반영된 뒤 다시 실행합니다.
-useEffect(() => {
-  // count를 사용하는 작업
-}, [count]);
 ```
 
-- 빈 의존성 배열 `[]`은 같은 컴포넌트 인스턴스에서 첫 성공 반영 뒤 한 번 실행하는 방향입니다. 인스턴스가 제거된 후 새로 만들어지면 다시 실행하며, 활성 루트의 대상 DOM 교체 시에도 예외적으로 다시 실행합니다.
-- 의존성이 있는 경우 이전 값과 새 값을 각각 `Object.is`로 비교합니다. 첫 성공 반영 뒤 실행하고, 이후에는 의존성이 바뀌었을 때 실행합니다.
-- 렌더링 중에는 Effect를 기록만 하고, DOM Patch와 Hook 상태 확정이 성공한 뒤 실행합니다. 렌더링 또는 Patch에 실패한 시도의 Effect는 실행하지 않습니다.
-- 의존성 배열을 생략하면 성공적으로 화면을 반영할 때마다 Effect를 실행하는 방향입니다. 반환한 정리 함수는 Effect가 다시 실행되기 전과 컴포넌트가 제거될 때 실행할 계획입니다.
-- 첫 버전은 루트의 Effect 또는 그 정리 함수가 직접 실행되는 동안 해당 루트의 상태 변경 함수를 호출하면 오류로 처리합니다. Effect가 끝난 뒤 사용자의 클릭이나 타이머 등에서 상태를 변경하는 경우와 구분합니다. 나중에 요청을 보관해 Effect 처리가 끝난 후 반영하는 방식을 검토합니다.
-- 정리나 Effect 실행에 실패하면 오류를 알리고 새 Effect 실행을 중단하며 새로고침을 안내하는 방향입니다. 정리 함수 하나가 실패해도 다른 정리 함수는 계속 실행합니다. 자동 재시도와 자원 복구는 추후 검토합니다.
-- Effect 차단 상태에서 화면은 확정됐지만 실행 대상 Effect를 처리하지 못했다면 결과에 `ok: false`, `committed: true`, `reason: "effect-blocked"`를 담는 방향입니다. 페이지 사용자에게 화면은 갱신됐지만 일부 기능을 실행할 수 없으며 새로고침이 필요하다는 안내를 차단 상태 동안 닫을 수 없게 표시합니다. 결과만으로 UI가 자동 생성되는 것은 아니며 페이지와 오류 전달을 연결하는 방식은 아직 설계 중입니다.
-- 의존성 배열의 길이나 생략 여부가 바뀌면 변경된 것으로 판단합니다. 배열 자체는 복사하고 내부 객체는 같은 참조를 유지하므로 객체를 직접 바꾸면 참조 비교로 변경을 감지할 수 없습니다.
+### `useMemo(calculate, dependencies?)`
 
-### 계산 결과 재사용: `useMemo`
+의존성이 같으면 이전 계산 결과를 재사용합니다. 계산 함수에는 부수 효과를 넣지 않습니다.
 
 ```js
-const result = useMemo(() => calculate(count), [count]);
+const doubled = useMemo(() => count * 2, [count]);
 ```
 
-첫 계산 결과와 의존성을 저장하고, 이후 의존성이 `Object.is` 기준으로 같으면 결과를 재사용합니다. 의존성을 생략하면 매 렌더링마다 계산하고, `[]`을 전달하면 첫 결과를 재사용합니다. 배열 길이나 생략 여부가 바뀌면 다시 계산합니다.
+두 Hook의 의존성 규칙은 같습니다.
 
-계산 함수는 렌더링 중 실행되므로 상태 변경이나 외부 자원 변경을 하지 않는 순수한 계산으로 작성합니다. 계산 또는 화면 반영이 실패하면 새 계산 결과를 확정하지 않는 방향입니다.
+| 의존성 | 실행 시점 |
+| --- | --- |
+| 생략 | 렌더링마다 실행 |
+| `[]` | 최초 실행. Effect 정리는 unmount 때 실행 |
+| `[value, ...]` | 최초 실행 및 의존성의 길이나 값이 바뀔 때 실행. 값은 `Object.is`로 비교 |
 
-## Phase 2 실험실
+활성 영역을 다른 DOM 대상으로 옮기는 경우에는 `[]` Effect도 정리 후 다시 실행합니다. 대상 교체는 `registerArea`에 같은 식별자와 새 요소를 전달하며, 입력 상태를 안전하게 옮길 수 없는 경우 거부될 수 있습니다.
 
-로컬 정적 서버에서 `/phase2/index.html`을 열면 독립된 카운터 두 개와 입력, Memo, Effect를 확인할 수 있습니다. 구현은 `src/phase2/index.js`에 있으며 바닐라 JavaScript로 작성했습니다. Phase 1 페이지는 별도로 유지합니다.
+## DOM 변환 · Diff · Patch
 
-루트에 `registerArea(id, container)`로 빈 영역을 등록한 뒤 `new FunctionComponent(App, { onError }).mount(container, props)`로 시작합니다. `update(newProps)`는 props를 교체하고, `unmount()`는 화면과 Effect를 정리합니다. 컴포넌트는 Phase 1 형태의 VDOM 요소 또는 `null`을 반환하고, 자식은 `renderChild(Child, props)`로 호출합니다. 렌더링 중 `registerEvent(node, 'click' | 'input' | 'change', handler)`로 프로그램 이벤트를 등록합니다. Hook은 루트에서만 같은 순서로 호출합니다.
+컴포넌트 없이 DOM 비교와 갱신 기능만 가져와 사용할 수도 있습니다.
 
-`setState`는 동기적으로 상태 후보를 만들고 루트를 실행한 뒤 Phase 1의 `diff`, `preparePatch`, `applyPatch`를 사용합니다. DOM과 이벤트가 확정된 후 Effect 정리와 실행을 처리합니다. 의존성은 `Object.is`로 비교하고 배열은 얕게 복사합니다. 배칭, 비동기 컴포넌트, 중첩 루트와 React API 전체는 지원하지 않습니다. 객체 상태와 props의 중첩 값은 직접 수정하지 마세요.
+| 함수 | 모듈 | 설명 |
+| --- | --- | --- |
+| `createVirtualRoot(container)` | `src/vdom.js` | 컨테이너의 자식 DOM을 읽어 가상 루트 트리로 변환합니다. |
+| `renderVirtualRoot(tree, document)` | `src/render.js` | 가상 루트 트리를 `DocumentFragment`로 만듭니다. |
+| `diff(oldTree, nextTree)` | `src/diff.js` | 두 트리를 비교해 변경 목록을 반환합니다. |
+| `preparePatch(container, changes, oldTree)` | `src/patch.js` | 현재 DOM 경로를 확인하고 반영할 작업을 준비합니다. |
+| `applyPatch(container, actions, nextTree)` | `src/patch.js` | 준비한 작업과 최종 폼 상태를 실제 DOM에 반영합니다. |
 
-## 자식 항목의 key와 이동
+아래 코드는 빈 `<div id="result"></div>`가 있는 페이지의 모듈 스크립트에서 실행할 수 있습니다.
 
-같은 부모 안에서 목록 항목의 순서가 바뀌더라도 기존 DOM 노드를 유지하려면 각 요소에 `data-key`를 지정합니다.
+```js
+import { createVirtualRoot } from './src/vdom.js';
+import { renderVirtualRoot } from './src/render.js';
+import { diff } from './src/diff.js';
+import { preparePatch, applyPatch } from './src/patch.js';
 
-```html
-<ul>
-  <li data-key="apple">사과</li>
-  <li data-key="banana">바나나</li>
-</ul>
+const source = document.createElement('div');
+source.innerHTML = '<p>안녕하세요</p>';
+const oldTree = createVirtualRoot(source);
+const container = document.querySelector('#result');
+container.replaceChildren(renderVirtualRoot(oldTree, document));
+
+source.innerHTML = '<p>반갑습니다</p>';
+const nextTree = createVirtualRoot(source);
+const changes = diff(oldTree, nextTree);
+const actions = preparePatch(container, changes, oldTree);
+applyPatch(container, actions, nextTree);
 ```
 
-순서를 바꿔도 같은 key의 같은 태그는 같은 항목으로 비교하므로 기존 DOM 노드를 이동하고 필요한 내용만 수정합니다. Phase 2에서 VDOM을 직접 만들 때도 요소의 `attributes`에 `'data-key': 'apple'`처럼 지정합니다. `data-key`는 실제 HTML 속성으로 남으며 React의 별도 `key` 속성과는 구현 방식이 다릅니다.
+`container`의 현재 DOM은 `oldTree`와 일치해야 합니다. 직접 사용하는 Patch 함수에는 컴포넌트의 자동 복구 처리가 포함되어 있지 않습니다. 연속 갱신할 때는 성공한 `nextTree`를 다음 비교의 이전 트리로 사용하세요.
 
-- key는 **같은 부모의 자식 사이에서 고유한, 공백만으로 이루어지지 않은 문자열**이어야 합니다. 중복되거나 비어 있으면 오류를 알립니다. 다른 부모에서는 같은 key를 사용할 수 있습니다.
-- key를 지정하지 않은 자식은 기존처럼 위치를 기준으로 비교합니다. 단, key가 있는 목록에서 줄바꿈·들여쓰기처럼 공백 문자만 있는 텍스트는 바로 앞 key 기준 순번, 바로 뒤 key 기준 순번(항목과 앞 들여쓰기가 함께 이동하는 순환 이동), 공백 내용의 순서 중 변경 수가 가장 적은 대응을 골라 key 항목의 삽입·삭제·이동 때 불필요한 텍스트 변경과 이동을 만들지 않습니다. 이때도 공백 내용이 달라지면 변경으로 보고하고, 앞뒤 기준 key가 모두 그대로인 공백을 다른 자리로 옮기는 대응은 쓰지 않습니다.
-- 한계: 공백 내용의 순서 비교는 양쪽 공백 텍스트 수의 곱만큼 시간과 메모리(셀당 4바이트)를 씁니다. 곱이 100만 셀(양쪽 약 1000개씩)을 넘으면 이 비교를 건너뛰고 앞·뒤 key 기준 순번 대응만 사용하므로, 매우 긴 서식 목록의 교체·끝 항목 변경에서는 공백 텍스트 변경이 일부 더 보고될 수 있습니다(DOM 결과는 같음). 공백 노드의 재배치는 변경 목록에 별도 이동으로 집계하지 않으며, 이동하는 key 요소 자체에 포커스가 있으면 브라우저 재배치로 포커스를 잃을 수 있습니다. 서로 다른 부모 사이의 이동은 추적하지 않고 삭제와 추가로 처리합니다.
-- 같은 key라도 태그가 바뀌면 기존 노드를 교체합니다. key를 변경하면 이전 항목을 삭제하고 새 항목을 추가하는 것으로 취급합니다.
-- Phase 2에서 루트의 대상 영역 자체를 교체할 때 입력 요소의 대응 관계 검사는 아직 key 이동을 반영하지 않습니다. 같은 종류의 입력 요소가 여러 개이거나 순서가 달라진 경우 안전을 위해 대상 교체를 거부할 수 있습니다.
-- 일부 이동·삽입·삭제의 횟수를 줄이지만, 모든 DOM 작업의 전역 최솟값을 보장하지는 않습니다. 입력값과 이벤트를 다루는 경우에도 변경 후 상태와 기존 노드 유지 여부를 테스트합니다.
+`createVirtualRoot`는 제한된 HTML 태그·속성·스타일만 지원합니다. 허용 목록은 [src/vdom.js](src/vdom.js)를 확인하세요. HTML 문자열 이벤트 속성과 주석은 지원하지 않습니다.
 
-활성 영역 대상 교체는 `registerArea`에 같은 식별자와 새 영역을 전달합니다. 입력 요소의 대응이나 새 입력값과 상태 제어값의 일치를 확인할 수 없으면 교체를 실패 처리합니다. 외부 코드는 관리 영역 안의 이벤트 리스너와 DOM을 변경하지 않아야 합니다. 작업 결과의 `ok`, `committed`, `errors`와 오류 콜백을 통해 실패를 확인할 수 있으며 임의의 사용자 코드 부작용은 복구할 수 없습니다.
+목록의 요소에는 `attributes: { 'data-key': 'apple' }`처럼 key를 지정할 수 있습니다. 같은 부모 안에서 고유하고 공백만으로 이루어지지 않은 문자열이어야 합니다. 같은 key와 태그의 항목은 순서가 바뀌어도 기존 DOM을 재사용하며, 태그가 바뀌면 교체합니다. 부모가 다른 항목의 이동은 삭제와 추가로 처리합니다.
 
+## 오류 처리와 지원 범위
 
+`mount`, `update`, `unmount`, 상태 변경 함수는 작업 결과를 반환합니다.
 
-Phase 2는 반환된 VDOM의 구조와 순환 참조를 검사하고 읽기 전용 복사본을 확정합니다. 같은 VDOM 객체를 여러 위치에서 사용하면 각 위치에 이벤트를 연결하며, 원본 객체를 나중에 수정해도 이미 확정된 트리는 바뀌지 않습니다. 비제어 입력과 선택 목록은 같은 요소로 대응하는 갱신에서 현재 값을 보존합니다. 대상 교체에서 새 영역의 입력 요소와 기존 요소가 확실히 대응하지 않거나 상태 제어값과 새 입력값이 충돌하면 교체를 실패 처리합니다. 화면이 복구되지 않았거나 Effect가 차단된 경우 새로고침 안내가 유지되고, 일시적인 오류 메시지는 닫을 수 있습니다.
+- `ok`: 작업의 성공 여부입니다.
+- `committed`: 화면·상태 변경이 확정되었는지 나타냅니다. Effect 오류처럼 `ok: false`여도 `true`일 수 있습니다.
+- `errors`: 이번 작업의 오류 목록입니다. 각 항목에 `phase`와 원래 `error`가 들어갑니다.
+- `recovery`: 복구 정보가 있을 때 `not-needed`, `restored`, `failed`로 전달합니다.
 
-외부 DOM 이동으로 관리 영역이 겹치면 화면을 변경하기 전에 작업을 거부합니다(`committed: false`, `recovery: "not-needed"`). `unmount()`가 이 때문에 거부되어도 루트와 화면은 유지되며, 겹침을 해소한 뒤 다시 시도할 수 있습니다. `replaceTarget()`은 기존 DOM과 새 대상의 입력 요소 대응을 검사하고, 안전하게 옮길 수 없는 경우 교체를 거부합니다. 이벤트 처리 함수와 Effect, 정리 및 오류 콜백은 다른 루트가 렌더링 중이더라도 그 렌더 문맥 밖에서 실행됩니다.
+실패는 `onError`에도 전달되며, 사용자 안내 UI는 사용하는 쪽에서 연결합니다. mount 전 update 같은 잘못된 호출은 예외를 던집니다. 복구 실패나 Effect 차단 오류는 새로고침이 필요할 수 있으며, 사용자 코드의 부수 효과까지 되돌리지는 않습니다.
+
+JSX, 클래스형 컴포넌트, 비동기 컴포넌트, 자식의 상태·Hook, 상태 변경 배칭과 중첩 루트는 지원하지 않습니다. 관리 영역 내부의 DOM과 이벤트 리스너는 라이브러리가 관리하도록 두세요.
+
+## 데모와 테스트
+
+위 정적 서버를 실행하면 다음 데모를 열 수 있습니다.
+
+- [Phase 1: DOM 비교와 Patch](http://127.0.0.1:4173/index.html)
+- [Phase 2: 컴포넌트와 Hook](http://127.0.0.1:4173/phase2/index.html)
+
+테스트 의존성을 설치하고 실행합니다. 브라우저 테스트의 기본 실행 환경은 설치된 Google Chrome입니다.
+
+```sh
+npm install
+node --test tests/unit/*.test.js
+npm run test:acceptance
+npx playwright test -c tests/phase2/playwright.config.js
+```
+
+기존 README의 설계 기록은 [README.backup.md](README.backup.md)에 보관했습니다.

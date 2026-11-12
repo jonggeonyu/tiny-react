@@ -1,0 +1,12 @@
+{
+  "name": "hjm-mini-react",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:acceptance": "playwright test -c tests/playwright.config.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0",
+    "playwright": "1.65.0"
+  }
+}

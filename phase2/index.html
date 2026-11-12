@@ -1,0 +1,23 @@
+﻿<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>미니 리액트 상태 실험실</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main>
+    <a href="../">← Virtual DOM 실험실</a>
+    <h1>상태와 Hook 실험실</h1>
+    <p>각 카운터는 독립적으로 동작합니다. 버튼과 입력을 바꾸며 계산과 화면 반영 후 실행을 확인하세요.</p>
+    <div class="cards">
+      <section><h2>첫 번째 카운터</h2><div id="notice-a" role="status"></div><div id="root-a"></div><p id="effect-a"></p><button id="unmount-a" type="button">화면 제거</button></section>
+      <section><h2>두 번째 카운터</h2><div id="notice-b" role="status"></div><div id="root-b"></div><p id="effect-b"></p><button id="unmount-b" type="button">화면 제거</button></section>
+    </div>
+    <p>계산 결과는 숫자가 달라질 때 다시 구합니다. 화면을 갱신할 때 바뀌지 않은 요소는 유지합니다.</p>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
+

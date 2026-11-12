@@ -1,0 +1,8 @@
+﻿body { margin: 0; font-family: system-ui, sans-serif; color: #253046; background: #f3f6fa; line-height: 1.6; }
+main { max-width: 1000px; margin: auto; padding: 2rem; }
+a { color: #2354a3; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+section { background: white; border: 1px solid #d7dfeb; border-radius: 12px; padding: 1.25rem; }
+button, input { font: inherit; padding: .4rem .7rem; }
+button { background: #2454a3; color: white; border: 0; border-radius: 5px; cursor: pointer; }
+[role="status"] { color: #a12020; }
